@@ -21,8 +21,8 @@ bool test_circleWithCircleCollDetect()
     uint32_t i;
     circleWithCircleCollDetectTestCase tcs[] = {
         {{{0,0}, 1}, {5, 0}, {{3,0}, 1}, true, 0.2},
-        {{{0,0}, 2}, {6, 0}, {{4,0}, 1}, true, 0.2},
-        {{{0,0}, 1}, {6, 0}, {{4,0}, 2}, true, 0.2},
+        {{{0,0}, 2}, {6, 0}, {{4,0}, 1}, true, 1/6.},
+        {{{0,0}, 1}, {6, 0}, {{4,0}, 2}, true, 1/6.},
     };
 
     for (i = 0; i < ARRAY_SIZE(tcs); i++)

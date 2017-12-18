@@ -49,6 +49,29 @@ bool betweenPoints(jfloat a, jfloat b, jfloat c)
     return false;
 }
 
+bool getDesiredSolutionIfExtant(const jfloat * solns, jint num_solns, jfloat * t)
+{
+    // soln will contain the time of first collision (if
+    // there was a collision)
+    jfloat soln = -1;
+    jint i;
+    for (i = 0; i < num_solns; i++) // find the minimum value in solns
+    {
+        if (solns[i] >= 0 && (solns[i] < soln || soln < 0))
+        {
+            soln = solns[i];
+        }
+    }
+
+    if (soln < 0 || soln > 1) // collision did not happen this timestep
+    {
+        return false;
+    }
+
+    *t = soln;
+    return true;
+}
+
 bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AXIS ax, jfloat * tc)
 {
     jfloat t[4]; // times when circle crosses extended line
@@ -109,31 +132,7 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
         num_solns += 2;
     }
 
-    // if no intersections, then no collision
-    if (num_solns == 0)
-    {
-        return false;
-    }
-
-    // t_soln will contain the time of first collision (if
-    // there was a collision)
-    jfloat t_soln = -1;
-    juint i;
-    for (i = 0; i < num_solns; i++)
-    {
-        if (t[i] >= 0 && (t[i] < t_soln || t_soln < 0))
-        {
-            t_soln = t[i];
-        }
-    }
-
-    if (t_soln < 0 || t_soln > 1)
-    {
-        return false;
-    }
-
-    *tc = t_soln;
-    return true;
+    return getDesiredSolutionIfExtant(t, num_solns, tc);
 }
 
 bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
@@ -141,28 +140,12 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
     jcircle c3 = {{c2.c[0], c2.c[1]}, c1.r + c2.r};
     jfloat tt[2];
 
-    bool ret = circleLineCollDetect(c3, c1.c, v, t);
+    bool ret = circleLineCollDetect(c3, c1.c, v, tt);
 
     if (!ret)
         return ret;
 
-    jfloat t_soln = -1;
-    juint i;
-    for (i = 0; i < 2; i++)
-    {
-        if (t[i] >= 0 && (t[i] < t_soln || t_soln < 0))
-        {
-            t_soln = t[i];
-        }
-    }
-
-    if (t_soln < 0 || t_soln > 1)
-    {
-        return false;
-    }
-
-    *t = t_soln;
-    return true;
+    return getDesiredSolutionIfExtant(tt, 2, t);
 }
 
 bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc)
@@ -197,23 +180,7 @@ bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc)
         return false;
     }
 
-    int i;
-    jfloat t_soln = -1;
-    for (i = 0; i < num_collisions; i++)
-    {
-        if (t[i] >= 0 && (t[i] < t_soln || t_soln < 0))
-        {
-            t_soln = t[i];
-        }
-    }
-
-    if (t_soln < 0 || t_soln > 1)
-    {
-        return false;
-    }
-
-    *tc = t_soln;
-    return true;
+    return getDesiredSolutionIfExtant(t, num_collisions, tc);
 }
 
 /**
