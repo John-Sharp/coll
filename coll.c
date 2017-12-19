@@ -4,6 +4,171 @@
 #include <math.h>
 
 #include <stdio.h>
+#include <stdlib.h>
+
+#include "listCode/jcObjectList.c"
+#include "listCode/jcPairingList.c"
+#include "listCode/jcRegisteredCollHandlerList.c"
+
+jcEng * initJcEng(jcEng * eng)
+{
+    eng->objectList = NULL;
+    eng->pairingList = NULL;
+    eng->registeredCollHandlerList = NULL;
+}
+
+bool pairingGroupNumCmp(const jcPairing * a, const jcPairing * b)
+{
+    if ((a->objects[0]->groupNum == b->objects[0]->groupNum)
+            && (a->objects[1]->groupNum == b->objects[1]->groupNum))
+        return true;
+
+    if ((a->objects[0]->groupNum == b->objects[1]->groupNum)
+            && (a->objects[1]->groupNum == b->objects[0]->groupNum))
+        return true;
+
+    return false;
+}
+
+void removePairings(jcEng * eng, juint groupNum1, juint groupNum2)
+{
+    jcPairing * removedVal = NULL;
+    jcObject testObjects[2] = {{groupNum : groupNum1}, {groupNum : groupNum2}};
+    jcPairing testPairing = {{&testObjects[0], &testObjects[1]}, NULL};
+
+    while (1)
+    {
+        eng->pairingList = jcPairingListRm(eng->pairingList, &testPairing, pairingGroupNumCmp, &removedVal);
+        if (removedVal == NULL)
+            break;
+        free(removedVal);
+    }
+}
+
+bool constructPairings(jcEng * eng, jcRegisteredCollHandler * ch)
+{
+    jcObjectList * objectsGroup1 = NULL;
+    jcObjectList * objectsGroup2 = NULL;
+    jcObjectList * ln;
+
+    removePairings(eng, ch->groupNums[0], ch->groupNums[1]);
+
+    for (ln = eng->objectList; ln != NULL; ln = ln->next)
+    {
+        if (ln->val->groupNum == ch->groupNums[0])
+            objectsGroup1 = jcObjectListAdd(objectsGroup1, ln->val);
+        if (ln->val->groupNum == ch->groupNums[1])
+            objectsGroup2 = jcObjectListAdd(objectsGroup2, ln->val);
+    }
+
+    jcObjectList * ln2;
+    for (ln = objectsGroup1; ln != NULL; ln = ln->next)
+    {
+        for (ln2 = objectsGroup2; ln2 != NULL; ln2 = ln2->next)
+        {
+            jcPairing * pairing = malloc(sizeof(*pairing));
+            if (!pairing)
+            {
+                // TODO destroy objectsGroup1, objectsGroup2
+                return false;
+            }
+            pairing->objects[0] = ln->val;
+            pairing->objects[1] = ln2->val;
+            pairing->handler = ch->handler;
+            eng->pairingList = jcPairingListAdd(eng->pairingList, pairing);
+        }
+    }
+    return true;
+}
+
+bool registerCollHandler(jcEng * eng, juint groupNum1, juint groupNum2, collHandler handler)
+{
+    jcRegisteredCollHandler * collHandler = malloc(sizeof(*collHandler));
+    if (!collHandler)
+        return false;
+    collHandler->groupNums[0] = groupNum1;
+    collHandler->groupNums[1] = groupNum2;
+    collHandler->handler = handler;
+
+    eng->registeredCollHandlerList = jcRegisteredCollHandlerListAdd(eng->registeredCollHandlerList, collHandler);
+
+    constructPairings(eng, collHandler);
+    return true;
+}
+
+bool constructObjectPairings(jcEng * eng, jcObject * ob)
+{
+    jcRegisteredCollHandlerList * ln;
+    for (ln = eng->registeredCollHandlerList; ln != NULL; ln = ln->next)
+    {
+        unsigned int i;
+
+        for (i = 0; i < 2; i++)
+        {
+            if (ln->val->groupNums[i] == ob->groupNum)
+            {
+                jcObjectList * pl;
+                for (pl = eng->objectList; pl != NULL; pl = pl->next)
+                {
+                    if (pl->val->groupNum == ln->val->groupNums[(i+1)%2])
+                    {
+                        jcPairing * pairing = malloc(sizeof(*pairing));
+
+                        if (!pairing)
+                        {
+                            return false;
+                        }
+                        pairing->objects[i] = ob;
+                        pairing->objects[(i+1)%2] = pl->val;
+                        pairing->handler = ln->val->handler;
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool registerCircle(jcEng * eng, const jcircle * c, juint groupNum, void * owner)
+{
+    jcObject * object = malloc(sizeof(*object));
+
+    if (!object)
+        return false;
+
+    object->shapeType = SHAPE_TYPE_CIRCLE;
+    object->shape.circle = c;
+    object->groupNum = groupNum;
+    object->owner = owner;
+
+    if (!constructObjectPairings(eng, object))
+    {
+        free(object);
+        return false;
+    }
+    
+    eng->objectList = jcObjectListAdd(eng->objectList, object);
+}
+
+bool registerRect(jcEng * eng, const jrect * r, juint groupNum, void * owner)
+{
+    jcObject * object = malloc(sizeof(*object));
+
+    if (!object)
+        return false;
+
+    object->shapeType = SHAPE_TYPE_RECT;
+    object->shape.rect = r;
+    object->groupNum = groupNum;
+    object->owner = owner;
+
+    if (!constructObjectPairings(eng, object))
+    {
+        free(object);
+        return false;
+    }
+    
+    eng->objectList = jcObjectListAdd(eng->objectList, object);
+}
 
 bool solveQuadratic(jfloat a, jfloat b, jfloat c, jfloat *x)
 {

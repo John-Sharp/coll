@@ -1,4 +1,5 @@
 #ifndef COLL_H
+#define COLL_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -20,6 +21,57 @@ typedef struct jrect
   jvec bl; // bottom left
   jvec tr; // top right
 } jrect;
+
+typedef enum SHAPE_TYPE
+{
+  SHAPE_TYPE_CIRCLE,
+  SHAPE_TYPE_RECT
+} SHAPE_TYPE;
+
+typedef struct jcObject
+{
+  SHAPE_TYPE shapeType;
+  union shape 
+  {
+    const jcircle * circle;
+    const jrect * rect;
+  } shape;
+
+  juint groupNum;
+  void * owner;
+
+} jcObject;
+
+typedef void (*collHandler)(jcObject * objects, jfloat t);
+
+typedef struct jcPairing
+{
+  jcObject * objects[2];
+  collHandler handler;
+} jcPairing;
+
+typedef struct jcRegisteredCollHandler
+{
+  juint groupNums[2];
+  collHandler handler;
+} jcRegisteredCollHandler;
+
+#include "listHeaders/jcObjectList.h"
+#include "listHeaders/jcPairingList.h"
+#include "listHeaders/jcRegisteredCollHandlerList.h"
+typedef struct jcEng
+{
+  jcObjectList * objectList;
+  jcPairingList * pairingList;
+  jcRegisteredCollHandlerList * registeredCollHandlerList;
+} jcEng;
+jcEng * initJcEng(jcEng * eng);
+
+bool registerCollHandler(jcEng * eng, juint groupNum1, juint groupNum2, collHandler handler);
+bool registerCircle(jcEng * eng, const jcircle * c, juint groupNum, void * owner);
+bool registerRect(jcEng * eng, const jrect * r, juint groupNum, void * owner);
+
+void processCollisions();
 
 typedef enum AXIS
 {
@@ -49,5 +101,4 @@ typedef struct oneDimCollObj
 
 oneDimCollObj oneDCollDetect(uint32_t a, int32_t b1, int32_t b2, int32_t v);
 
-#define COLL_H
 #endif
