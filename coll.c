@@ -56,9 +56,23 @@ bool constructPairings(jcEng * eng, jcRegisteredCollHandler * ch)
     for (ln = eng->objectList; ln != NULL; ln = ln->next)
     {
         if (ln->val->groupNum == ch->groupNums[0])
+        {
             objectsGroup1 = jcObjectListAdd(objectsGroup1, ln->val);
+            continue;
+        }
         if (ln->val->groupNum == ch->groupNums[1])
+        {
             objectsGroup2 = jcObjectListAdd(objectsGroup2, ln->val);
+        }
+    }
+
+    // In special case of group self-interaction,
+    // this step ensures we don't get double-counting
+    if (ch->groupNums[0] == ch->groupNums[1])
+    {
+        objectsGroup2 = objectsGroup1;
+        objectsGroup1 = objectsGroup1->next;
+        objectsGroup2->next = NULL;
     }
 
     jcObjectList * ln2;
@@ -121,11 +135,13 @@ bool constructObjectPairings(jcEng * eng, jcObject * ob)
                         pairing->objects[i] = ob;
                         pairing->objects[(i+1)%2] = pl->val;
                         pairing->handler = ln->val->handler;
+                        eng->pairingList = jcPairingListAdd(eng->pairingList, pairing);
                     }
                 }
             }
         }
     }
+    return true;
 }
 
 bool registerCircle(jcEng * eng, const jcircle * c, juint groupNum, void * owner)

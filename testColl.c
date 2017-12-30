@@ -7,6 +7,505 @@
 
 jfloat DELTA = 0.000001;
 
+// test case
+// registrations (shape type (letter), groupnum)
+// coll handlers (groupnum1, groupnum2)
+// expected pairings (indicies of shape1, shape2, collHandler)
+
+typedef enum REGISTRATION_TEST_PARAM_TYPE
+{
+    REGISTRATION_TEST_PARAM_TYPE_CIRCLE,
+    REGISTRATION_TEST_PARAM_TYPE_RECT,
+    REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER,
+} REGISTRATION_TEST_PARAM_TYPE;
+
+typedef struct registrationTestParams
+{
+    REGISTRATION_TEST_PARAM_TYPE type;
+    juint groupNum1;
+    juint groupNum2;
+    union
+    {
+        jcircle * circle;
+        jrect * rect;
+    } shape;
+    union
+    {
+        collHandler handler;
+        void * owner;
+    } ownerHandler;
+} registrationTestParams;
+
+typedef struct expectedJcObjectParams
+{
+    SHAPE_TYPE shapeType;
+    juint groupNum;
+    void * owner;
+} expectedJcObjectParams;
+
+typedef struct expectedJcPairing
+{
+    jcObject objects[2];
+    collHandler handler;
+} expectedJcPairing;
+
+typedef struct jcEngRegistrationsTestCase
+{
+    juint numRegistrations;
+    registrationTestParams params[10];
+    juint numExpectedObjects;
+    jcObject expectedObjects[10];
+    juint numExpectedCollHandlers;
+    jcRegisteredCollHandler expectedCollHandlers[10];
+    juint numExpectedPairings;
+    expectedJcPairing expectedPairings[72];
+} jcEngRegistrationsTestCase;
+
+#define TEST_OWNER 22
+#define TEST_HANDLER 23
+
+bool jcObjectsIdentical(const jcObject * ob1, const jcObject * ob2)
+{
+    if (ob1->shapeType == ob2->shapeType &&
+    ob1->groupNum == ob2->groupNum &&
+    ob1->owner == ob2->owner &&
+    ((ob1->shapeType == SHAPE_TYPE_CIRCLE && ob1->shape.circle == ob2->shape.circle) || 
+     (ob1->shapeType == SHAPE_TYPE_RECT && ob1->shape.rect == ob2->shape.rect)))
+    {
+        return true;
+    }
+    return false;
+}
+
+bool test_jcEngRegistrations()
+{
+    jcircle c;
+    jrect r;
+
+    uint32_t i;
+    jcEngRegistrationsTestCase tcs[] = {
+        // tc 0
+        {numRegistrations: 1, params: {
+            {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
+                                      },
+         numExpectedObjects: 1, expectedObjects: {{shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER}},
+         numExpectedCollHandlers: 0,
+         numExpectedPairings: 0
+        },
+        // tc 1
+        {numRegistrations: 1, params: {
+            {type: REGISTRATION_TEST_PARAM_TYPE_RECT,  shape: {rect: &r}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
+                                      },
+         numExpectedObjects: 1, expectedObjects: {{shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER}},
+         numExpectedCollHandlers: 0,
+         numExpectedPairings: 0
+        },
+        // tc 2
+        {numRegistrations: 2, params: {
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
+            },
+         numExpectedObjects: 2, expectedObjects: {
+             {shapeType: SHAPE_TYPE_RECT,  shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+            },
+         numExpectedCollHandlers: 0,
+         numExpectedPairings: 0
+        },
+        // tc 3
+        {numRegistrations: 3, params: {
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 1, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
+            },
+         numExpectedObjects: 2, expectedObjects: {
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER},
+            },
+         numExpectedCollHandlers: 1, expectedCollHandlers: {
+             {{1, 1}, (collHandler)TEST_HANDLER},
+            },
+         numExpectedPairings: 1, expectedPairings: {
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  }
+                              }
+        },
+        // tc 4
+        {numRegistrations: 3, params: {
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
+            },
+         numExpectedObjects: 2, expectedObjects: {
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+            },
+         numExpectedCollHandlers: 1, expectedCollHandlers: {
+             {{1, 2}, (collHandler)TEST_HANDLER},
+            },
+         numExpectedPairings: 1, expectedPairings: {
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  }
+                              }
+        },
+        // tc 5
+        {numRegistrations: 3, params: {
+                {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
+            },
+         numExpectedObjects: 2, expectedObjects: {
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+            },
+         numExpectedCollHandlers: 1, expectedCollHandlers: {
+             {{1, 2}, (collHandler)TEST_HANDLER},
+            },
+         numExpectedPairings: 1, expectedPairings: {
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  }
+                              }
+        },
+        // tc 6
+        {numRegistrations: 3, params: {
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
+            },
+         numExpectedObjects: 2, expectedObjects: {
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+            },
+         numExpectedCollHandlers: 1, expectedCollHandlers: {
+             {{1, 2}, (collHandler)TEST_HANDLER},
+            },
+         numExpectedPairings: 1, expectedPairings: {
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  }
+                              }
+        },
+        // tc 7
+        {numRegistrations: 8, params: {
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)1}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)2}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)3}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)4}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)5}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)6}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)7}},
+            },
+         numExpectedObjects: 7, expectedObjects: {
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+            },
+         numExpectedCollHandlers: 1, expectedCollHandlers: {
+             {{1, 2}, (collHandler)TEST_HANDLER},
+            },
+         numExpectedPairings: 12, expectedPairings: {
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                                  {
+                                  {
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+                                  },
+                                  (collHandler)TEST_HANDLER
+                                  },
+                              }
+        },
+    };
+
+    for (i = 0; i < ARRAY_SIZE(tcs); i++)
+    {
+        jcEngRegistrationsTestCase * tc = &tcs[i];
+
+        jcEng eng;
+        initJcEng(&eng);
+
+        uint32_t j;
+        for (j = 0; j < tc->numRegistrations; j++)
+        {
+            registrationTestParams * param = &tc->params[j];
+            switch (param->type)
+            {
+                case REGISTRATION_TEST_PARAM_TYPE_CIRCLE:
+                    registerCircle(&eng, param->shape.circle, param->groupNum1, param->ownerHandler.owner);
+                    break;
+                case REGISTRATION_TEST_PARAM_TYPE_RECT:
+                    registerRect(&eng, param->shape.rect, param->groupNum1, param->ownerHandler.owner);
+                    break;
+                case REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER:
+                    registerCollHandler(&eng, param->groupNum1, param->groupNum2, param->ownerHandler.handler);
+                    break;
+            }
+        }
+
+        jcObjectList * p;
+        juint numRegisteredObjects = 0;
+        for (p = eng.objectList; p != NULL; p = p->next)
+        {
+            numRegisteredObjects++;
+        }
+
+        if (numRegisteredObjects != tc->numExpectedObjects)
+        {
+            printf("Number of objects: %u does not equal number of expected objects: %u, in test case: %u\n", numRegisteredObjects, tc->numExpectedObjects, i);
+            return false;
+        }
+
+
+        for (j = 0; j < tc->numExpectedObjects; j++)
+        {
+            jcObject * expectedObject = &tc->expectedObjects[j];
+            jcObjectList * pp = NULL;
+            bool found = false;
+            for (p = eng.objectList; p != NULL; p = p->next)
+            {
+                if (jcObjectsIdentical(p->val, expectedObject))
+                {
+                    found = true;
+                    break;
+                }
+                pp = p;
+            }
+            if (!found)
+            {
+                printf("Failed to find expected object: %u in test case: %u\n", j, i);
+                return false;
+            }
+            if (pp)
+            {
+                pp->next = p->next;
+            }
+        }
+
+        jcRegisteredCollHandlerList * q; 
+        juint numRegisteredCollHandlers = 0;
+        for (q = eng.registeredCollHandlerList; q != NULL; q = q->next)
+        {
+            numRegisteredCollHandlers++;
+        }
+
+        if (numRegisteredCollHandlers != tc->numExpectedCollHandlers)
+        {
+            printf("Number of coll handlers: %u does not equal number of expected coll handlers: %u, in test case: %u\n", numRegisteredCollHandlers, tc->numExpectedCollHandlers, i);
+            return false;
+        }
+
+        for (j = 0; j < tc->numExpectedCollHandlers; j++)
+        {
+            jcRegisteredCollHandler * expectedCollHandler = &tc->expectedCollHandlers[j];
+            jcRegisteredCollHandlerList * qq = NULL;
+            bool found = false;
+            for (q = eng.registeredCollHandlerList; q != NULL; q = q->next)
+            {
+                if (q->val->groupNums[0] == expectedCollHandler->groupNums[0] 
+                        && q->val->groupNums[1] == expectedCollHandler->groupNums[1]
+                        && q->val->handler == expectedCollHandler->handler)
+                {
+                    found = true;
+                    break;
+                }
+                if (q->val->groupNums[1] == expectedCollHandler->groupNums[0] 
+                        && q->val->groupNums[0] == expectedCollHandler->groupNums[1]
+                        && q->val->handler == expectedCollHandler->handler)
+                {
+                    found = true;
+                    break;
+                }
+                qq = q;
+            }
+
+            if (found == false)
+            {
+                printf("Failed to find coll handler %u, in test case %u\n", j, i);
+                return false;
+            }
+
+            if (qq)
+            {
+                qq->next = q->next;
+            }
+        }
+
+        jcPairingList * r; 
+        juint numPairings = 0;
+        for (r = eng.pairingList; r != NULL; r = r->next)
+        {
+            numPairings++;
+        }
+
+        if (numPairings != tc->numExpectedPairings)
+        {
+            printf("Number of pairings: %u does not equal number of expected pairings: %u, in test case: %u\n", numPairings, tc->numExpectedPairings, i);
+            return false;
+        }
+
+        for (j = 0; j < tc->numExpectedPairings; j++)
+        {
+            expectedJcPairing * expectedPairing = &tc->expectedPairings[j];
+            jcPairingList * rr = NULL;
+            bool found = false;
+            for (r = eng.pairingList; r != NULL; r = r->next)
+            {
+                if (jcObjectsIdentical(r->val->objects[0], &expectedPairing->objects[0])
+                        && jcObjectsIdentical(r->val->objects[1], &expectedPairing->objects[1])
+                        && r->val->handler == expectedPairing->handler)
+                {
+                    found = true;
+                    break;
+                }
+                if (jcObjectsIdentical(r->val->objects[1], &expectedPairing->objects[0])
+                        && jcObjectsIdentical(r->val->objects[0], &expectedPairing->objects[1])
+                        && r->val->handler == expectedPairing->handler)
+                {
+                    found = true;
+                    break;
+                }
+                rr = r;
+            }
+
+            if (found == false)
+            {
+                printf("Failed to find pairing %u, in test case %u\n", j, i);
+                return false;
+            }
+
+            if (rr)
+            {
+                rr->next = r->next;
+            }
+        }
+    }
+}
+
+bool test_jcEngRegistrationsInit()
+{
+    jcEng eng;
+    initJcEng(&eng);
+
+    if (eng.objectList != NULL)
+    {
+        printf("ERROR! test_jcEngRegistrations: objectList not initialised to NULL\n");
+        return false;
+    }
+
+    if (eng.pairingList != NULL)
+    {
+        printf("ERROR! test_jcEngRegistrations: pairingList not initialised to NULL\n");
+        return false;
+    }
+
+    if (eng.registeredCollHandlerList != NULL)
+    {
+        printf("ERROR! test_jcEngRegistrations: registeredCollHandlerList not initialised to NULL\n");
+        return false;
+    }
+
+    return true;
+}
+
 typedef struct circleWithCircleCollDetectTestCase
 {
     jcircle c1;
@@ -241,4 +740,6 @@ int main()
     test_circleWithAxisParallelSegCollDetect();
     test_circleWithRectCollDetect();
     test_circleWithCircleCollDetect();
+    test_jcEngRegistrationsInit();
+    test_jcEngRegistrations();
 }
