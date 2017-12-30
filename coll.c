@@ -144,7 +144,7 @@ bool constructObjectPairings(jcEng * eng, jcObject * ob)
     return true;
 }
 
-bool registerCircle(jcEng * eng, const jcircle * c, juint groupNum, void * owner)
+bool registerCircle(jcEng * eng, const jcircle * c, jvec * v, juint groupNum, void * owner)
 {
     jcObject * object = malloc(sizeof(*object));
 
@@ -153,6 +153,7 @@ bool registerCircle(jcEng * eng, const jcircle * c, juint groupNum, void * owner
 
     object->shapeType = SHAPE_TYPE_CIRCLE;
     object->shape.circle = c;
+    object->v = v;
     object->groupNum = groupNum;
     object->owner = owner;
 
@@ -165,7 +166,7 @@ bool registerCircle(jcEng * eng, const jcircle * c, juint groupNum, void * owner
     eng->objectList = jcObjectListAdd(eng->objectList, object);
 }
 
-bool registerRect(jcEng * eng, const jrect * r, juint groupNum, void * owner)
+bool registerRect(jcEng * eng, const jrect * r, jvec * v, juint groupNum, void * owner)
 {
     jcObject * object = malloc(sizeof(*object));
 
@@ -174,6 +175,7 @@ bool registerRect(jcEng * eng, const jrect * r, juint groupNum, void * owner)
 
     object->shapeType = SHAPE_TYPE_RECT;
     object->shape.rect = r;
+    object->v = v;
     object->groupNum = groupNum;
     object->owner = owner;
 

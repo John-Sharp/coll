@@ -37,6 +37,8 @@ typedef struct jcObject
     const jrect * rect;
   } shape;
 
+  jvec * v;
+
   juint groupNum;
   void * owner;
 
@@ -68,10 +70,10 @@ typedef struct jcEng
 jcEng * initJcEng(jcEng * eng);
 
 bool registerCollHandler(jcEng * eng, juint groupNum1, juint groupNum2, collHandler handler);
-bool registerCircle(jcEng * eng, const jcircle * c, juint groupNum, void * owner);
-bool registerRect(jcEng * eng, const jrect * r, juint groupNum, void * owner);
+bool registerCircle(jcEng * eng, const jcircle * c, jvec * v, juint groupNum, void * owner);
+bool registerRect(jcEng * eng, const jrect * r, jvec * v, juint groupNum, void * owner);
 
-void processCollisions();
+void processCollisions(jcEng * eng);
 
 typedef enum AXIS
 {

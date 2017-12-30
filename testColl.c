@@ -29,6 +29,7 @@ typedef struct registrationTestParams
         jcircle * circle;
         jrect * rect;
     } shape;
+    jvec * v;
     union
     {
         collHandler handler;
@@ -67,6 +68,7 @@ typedef struct jcEngRegistrationsTestCase
 bool jcObjectsIdentical(const jcObject * ob1, const jcObject * ob2)
 {
     if (ob1->shapeType == ob2->shapeType &&
+    ob1->v == ob2->v &&
     ob1->groupNum == ob2->groupNum &&
     ob1->owner == ob2->owner &&
     ((ob1->shapeType == SHAPE_TYPE_CIRCLE && ob1->shape.circle == ob2->shape.circle) || 
@@ -81,46 +83,47 @@ bool test_jcEngRegistrations()
 {
     jcircle c;
     jrect r;
+    jvec v;
 
     uint32_t i;
     jcEngRegistrationsTestCase tcs[] = {
         // tc 0
         {numRegistrations: 1, params: {
-            {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
+            {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
                                       },
-         numExpectedObjects: 1, expectedObjects: {{shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER}},
+         numExpectedObjects: 1, expectedObjects: {{shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER}},
          numExpectedCollHandlers: 0,
          numExpectedPairings: 0
         },
         // tc 1
         {numRegistrations: 1, params: {
-            {type: REGISTRATION_TEST_PARAM_TYPE_RECT,  shape: {rect: &r}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
+            {type: REGISTRATION_TEST_PARAM_TYPE_RECT,  shape: {rect: &r}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
                                       },
-         numExpectedObjects: 1, expectedObjects: {{shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER}},
+         numExpectedObjects: 1, expectedObjects: {{shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER}},
          numExpectedCollHandlers: 0,
          numExpectedPairings: 0
         },
         // tc 2
         {numRegistrations: 2, params: {
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}}
             },
          numExpectedObjects: 2, expectedObjects: {
-             {shapeType: SHAPE_TYPE_RECT,  shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER},
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT,  shape: {rect: &r}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
             },
          numExpectedCollHandlers: 0,
          numExpectedPairings: 0
         },
         // tc 3
         {numRegistrations: 3, params: {
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
                 {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 1, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
             },
          numExpectedObjects: 2, expectedObjects: {
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
             },
          numExpectedCollHandlers: 1, expectedCollHandlers: {
              {{1, 1}, (collHandler)TEST_HANDLER},
@@ -128,8 +131,8 @@ bool test_jcEngRegistrations()
          numExpectedPairings: 1, expectedPairings: {
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
                                   },
                                   (collHandler)TEST_HANDLER
                                   }
@@ -137,13 +140,13 @@ bool test_jcEngRegistrations()
         },
         // tc 4
         {numRegistrations: 3, params: {
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
                 {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
             },
          numExpectedObjects: 2, expectedObjects: {
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)TEST_OWNER},
             },
          numExpectedCollHandlers: 1, expectedCollHandlers: {
              {{1, 2}, (collHandler)TEST_HANDLER},
@@ -151,8 +154,8 @@ bool test_jcEngRegistrations()
          numExpectedPairings: 1, expectedPairings: {
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)TEST_OWNER},
                                   },
                                   (collHandler)TEST_HANDLER
                                   }
@@ -161,12 +164,12 @@ bool test_jcEngRegistrations()
         // tc 5
         {numRegistrations: 3, params: {
                 {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
             },
          numExpectedObjects: 2, expectedObjects: {
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)TEST_OWNER},
             },
          numExpectedCollHandlers: 1, expectedCollHandlers: {
              {{1, 2}, (collHandler)TEST_HANDLER},
@@ -174,8 +177,8 @@ bool test_jcEngRegistrations()
          numExpectedPairings: 1, expectedPairings: {
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)TEST_OWNER},
                                   },
                                   (collHandler)TEST_HANDLER
                                   }
@@ -183,13 +186,13 @@ bool test_jcEngRegistrations()
         },
         // tc 6
         {numRegistrations: 3, params: {
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)TEST_OWNER}},
                 {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 2, ownerHandler: {owner: (void *)TEST_OWNER}},
             },
          numExpectedObjects: 2, expectedObjects: {
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)TEST_OWNER},
             },
          numExpectedCollHandlers: 1, expectedCollHandlers: {
              {{1, 2}, (collHandler)TEST_HANDLER},
@@ -197,8 +200,8 @@ bool test_jcEngRegistrations()
          numExpectedPairings: 1, expectedPairings: {
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)TEST_OWNER},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)TEST_OWNER},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)TEST_OWNER},
                                   },
                                   (collHandler)TEST_HANDLER
                                   }
@@ -206,23 +209,23 @@ bool test_jcEngRegistrations()
         },
         // tc 7
         {numRegistrations: 8, params: {
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)1}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)2}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, groupNum1: 1, ownerHandler: {owner: (void *)3}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)1}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)2}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum1: 1, ownerHandler: {owner: (void *)3}},
                 {type: REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER, groupNum1: 1, groupNum2: 2, ownerHandler: {handler: (collHandler)TEST_HANDLER}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)4}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)5}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)6}},
-                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, groupNum1: 2, ownerHandler: {owner: (void *)7}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 2, ownerHandler: {owner: (void *)4}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 2, ownerHandler: {owner: (void *)5}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 2, ownerHandler: {owner: (void *)6}},
+                {type: REGISTRATION_TEST_PARAM_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum1: 2, ownerHandler: {owner: (void *)7}},
             },
          numExpectedObjects: 7, expectedObjects: {
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
-             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
-             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)1},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)2},
+             {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)3},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)4},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)5},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)6},
+             {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)7},
             },
          numExpectedCollHandlers: 1, expectedCollHandlers: {
              {{1, 2}, (collHandler)TEST_HANDLER},
@@ -230,85 +233,85 @@ bool test_jcEngRegistrations()
          numExpectedPairings: 12, expectedPairings: {
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)4},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)5},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)6},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)1},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)1},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)7},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)4},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)5},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)6},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)2},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)2},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)7},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)4},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)4},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)5},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)5},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)6},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)6},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
                                   {
                                   {
-                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, groupNum: 1, owner: (void *)3},
-                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, groupNum: 2, owner: (void *)7},
+                                      {shapeType: SHAPE_TYPE_CIRCLE, shape: {circle: &c}, v: &v, groupNum: 1, owner: (void *)3},
+                                      {shapeType: SHAPE_TYPE_RECT, shape: {rect: &r}, v: &v, groupNum: 2, owner: (void *)7},
                                   },
                                   (collHandler)TEST_HANDLER
                                   },
@@ -330,10 +333,10 @@ bool test_jcEngRegistrations()
             switch (param->type)
             {
                 case REGISTRATION_TEST_PARAM_TYPE_CIRCLE:
-                    registerCircle(&eng, param->shape.circle, param->groupNum1, param->ownerHandler.owner);
+                    registerCircle(&eng, param->shape.circle, param->v, param->groupNum1, param->ownerHandler.owner);
                     break;
                 case REGISTRATION_TEST_PARAM_TYPE_RECT:
-                    registerRect(&eng, param->shape.rect, param->groupNum1, param->ownerHandler.owner);
+                    registerRect(&eng, param->shape.rect, param->v, param->groupNum1, param->ownerHandler.owner);
                     break;
                 case REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER:
                     registerCollHandler(&eng, param->groupNum1, param->groupNum2, param->ownerHandler.handler);
