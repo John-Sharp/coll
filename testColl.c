@@ -509,10 +509,6 @@ bool test_jcEngRegistrationsInit()
     return true;
 }
 
-// TODO test_checkCollision
-// TODO test_sortCollisionList
-// TODO test_removeCollisionsInvolvingObjects
-
 typedef struct completeObject
 {
     union testShape
@@ -587,6 +583,35 @@ bool test_checkCollision()
     }
     return true;
 }
+
+typedef struct sortCollisionListTestCase
+{
+    juint numCollisions;
+    collision collisionList[MAX_COLLISIONS];
+} sortCollisionListTestCase;
+
+bool test_sortCollisionList()
+{
+    juint i;
+#include "testCases/sortCollisionList.inc"
+
+    for (i = 0; i < ARRAY_SIZE(tcs); i++)
+    {
+        qsort(tcs[i].collisionList, tcs[i].numCollisions, sizeof(tcs[i].collisionList[0]), clCompar);
+
+        juint j;
+        for (j = 0; j < tcs[i].numCollisions-1; j++)
+        {
+           if (tcs[i].collisionList[j].t > tcs[i].collisionList[j+1].t)
+           {
+                printf("TEST FAILED test_sortCollisionList(%u): collisionList[%u].t: %f, collisionList[%u].t: %f\n",
+                        i, j, tcs[i].collisionList[j].t, j+1, tcs[i].collisionList[j+1].t);
+           }
+        }
+    }
+}
+
+// TODO test_removeCollisionsInvolvingObjects
 
 typedef struct circleWithCircleCollDetectTestCase
 {
@@ -825,4 +850,5 @@ int main()
     test_jcEngRegistrationsInit();
     test_jcEngRegistrations();
     test_checkCollision();
+    test_sortCollisionList();
 }

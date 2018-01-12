@@ -208,7 +208,7 @@ void initCollisionList(collision * cl)
 
 int clCompar(const void * a, const void * b)
 {
-    if (((collision *)a)->t < ((collision *)b)->t)
+    if (((collision *)a)->t > ((collision *)b)->t)
         return 1;
     return -1;
 }
