@@ -509,6 +509,85 @@ bool test_jcEngRegistrationsInit()
     return true;
 }
 
+// TODO test_checkCollision
+// TODO test_sortCollisionList
+// TODO test_removeCollisionsInvolvingObjects
+
+typedef struct completeObject
+{
+    union testShape
+    {
+        jcircle circle;
+        jrect rect;
+    } shape; 
+
+    jvec v;
+
+    jcObject obj;
+} completeObject;
+
+jcObject * fillObject(completeObject * co)
+{
+    jcObject * ret = &co->obj;
+    ret->v = &co->v;
+
+    switch (co->obj.shapeType)
+    {
+        case SHAPE_TYPE_CIRCLE:
+            ret->shape.circle = &co->shape.circle;
+            break;
+        case SHAPE_TYPE_RECT:
+            ret->shape.rect = &co->shape.rect;
+            break;
+    }
+
+    return ret;
+}
+
+typedef struct checkCollisionTestCase
+{
+    completeObject obj1;
+    completeObject obj2;
+    jfloat tRem;
+    bool collExpected;
+    jfloat tExpected;
+} checkCollisionTestCase;
+
+bool test_checkCollision()
+{
+    juint i;
+#include "testCases/checkCollision.inc"
+
+    for (i = 0; i < ARRAY_SIZE(tcs); i++)
+    {
+        checkCollisionTestCase * tc = &tcs[i];
+        jfloat coll_time = 999;
+        bool ret;
+        jfloat tRecv;
+
+        jcObject * obj1 = fillObject(&tc->obj1);
+        jcObject * obj2 = fillObject(&tc->obj2);
+
+        jcPairing testPairing = {{obj1, obj2}, NULL};
+
+        bool collRecv;
+        if ((collRecv = checkCollision(&testPairing, tc->tRem, &tRecv)) != tc->collExpected)
+        {
+            printf("TEST FAILED test_checkCollision(%u): checkCollision returned: %s, expected: %s\n",
+                    i, collRecv ? "true" : "false", tc->collExpected ? "true" : "false");
+            return false;
+        }
+
+        if (collRecv && tRecv != tc->tExpected)
+        {
+            printf("TEST FAILED test_checkCollision(%u): checkCollision set t: %f, expected: %f\n",
+                    i, tRecv, tc->tExpected);
+            return false;
+        }
+    }
+    return true;
+}
+
 typedef struct circleWithCircleCollDetectTestCase
 {
     jcircle c1;
@@ -745,4 +824,5 @@ int main()
     test_circleWithCircleCollDetect();
     test_jcEngRegistrationsInit();
     test_jcEngRegistrations();
+    test_checkCollision();
 }

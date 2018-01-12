@@ -188,6 +188,170 @@ bool registerRect(jcEng * eng, const jrect * r, jvec * v, juint groupNum, void *
     eng->objectList = jcObjectListAdd(eng->objectList, object);
 }
 
+typedef struct collision
+{
+    jcPairing * pairing;
+    jfloat t;
+} collision;
+
+enum { MAX_COLLISIONS = 40 };
+
+void initCollisionList(collision * cl)
+{
+    juint i;
+    for (i = 0; i < MAX_COLLISIONS; i++)
+    {
+        cl[i].pairing = NULL;
+        cl[i].t = 2;
+    }
+}
+
+int clCompar(const void * a, const void * b)
+{
+    if (((collision *)a)->t < ((collision *)b)->t)
+        return 1;
+    return -1;
+}
+
+bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
+{
+    jvec v;
+    jfloat t_temp;
+
+    // calculate velocity of object 0 relative to object 1
+    v[0] = (*pairing->objects[0]->v)[0] - (*pairing->objects[1]->v)[0];
+    v[1] = (*pairing->objects[0]->v)[1] - (*pairing->objects[1]->v)[1];
+
+    if (pairing->objects[0]->shapeType == SHAPE_TYPE_CIRCLE
+            && pairing->objects[1]->shapeType == SHAPE_TYPE_CIRCLE)
+    {
+        if (circleWithCircleCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.circle, &t_temp) &&
+                t_temp <= tRem)
+        {
+            *t = t_temp;
+            return true;
+        }
+        return false;
+    }
+
+    if ((pairing->objects[0]->shapeType == SHAPE_TYPE_CIRCLE
+            && pairing->objects[1]->shapeType == SHAPE_TYPE_RECT))
+    {
+        if (circleWithRectCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.rect, &t_temp) &&
+                t_temp <= tRem)
+        {
+            *t = t_temp;
+            return true;
+        }
+        return false;
+    }
+
+    if ((pairing->objects[1]->shapeType == SHAPE_TYPE_CIRCLE
+            && pairing->objects[0]->shapeType == SHAPE_TYPE_RECT))
+    {
+        v[0] *= -1;
+        v[1] *= -1;
+        if (circleWithRectCollDetect(*pairing->objects[1]->shape.circle, v, *pairing->objects[0]->shape.rect, &t_temp) &&
+                t_temp <= tRem)
+        {
+            *t = t_temp;
+            return true;
+        }
+        return false;
+    }
+    // TODO rect-rect collision
+    return false;
+}
+
+void removeCollisionsInvolvingObjects(collision * collisionList, juint numCollisions, jcObject ** objectList, juint numObjects, juint * numCollisionsRemoved)
+{
+    *numCollisionsRemoved = 0;
+    juint i;
+    for (i = 0; i < numCollisions; i++)
+    {
+        collision * cc = &collisionList[i];
+
+        juint j;
+        for  (j = 0; j < numObjects; j++)
+        {
+            if (cc->pairing->objects[0] == objectList[j])
+            {
+                *numCollisionsRemoved += 1;
+                cc->t = 2;
+                break;
+            }
+        }
+    }
+}
+
+void processCollisions(jcEng * eng)
+{
+    jcPairingList * p;
+    collision collisionList[MAX_COLLISIONS];
+    initCollisionList(collisionList);
+    juint num_collisions = 0;
+
+    for (p = eng->pairingList; p != NULL; p = p->next)
+    {
+        jcPairing * pairing = p->val;
+
+        jfloat t;
+        if (checkCollision(pairing, 1.0, &t))
+        {
+            collisionList[num_collisions].pairing = pairing;
+            collisionList[num_collisions].t = t;
+            num_collisions++;
+            if (num_collisions == MAX_COLLISIONS)
+            {
+                fprintf(stderr, "ERROR! MAX_COLLISIONS was reached!\n");
+                break;
+            }
+        }
+    }
+
+    while (num_collisions > 0)
+    {
+        qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
+        jfloat tRem = 1 - collisionList[0].t; 
+
+        // resolve earliest collision
+        collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t);
+
+        // remove collisions involving objects in collision that has just been resolved
+        juint numCollisionsRemoved = 0;
+        removeCollisionsInvolvingObjects(collisionList, num_collisions, collisionList[0].pairing->objects, 2, &numCollisionsRemoved);
+        num_collisions -= numCollisionsRemoved;
+
+        qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
+
+        // go through all pairings, checking for collisions with pairings involving actors 
+        // in last resolved collision
+        for (p = eng->pairingList; p != NULL; p = p->next)
+        {
+            jcPairing * pairing = p->val;
+            jfloat t;
+
+            if (pairing->objects[0] == collisionList[0].pairing->objects[0]
+                    || pairing->objects[0] == collisionList[0].pairing->objects[1]
+                    || pairing->objects[1] == collisionList[0].pairing->objects[0]
+                    || pairing->objects[1] == collisionList[0].pairing->objects[1])
+            {
+                if (checkCollision(pairing, tRem, &t))
+                {
+                    collisionList[num_collisions].pairing;
+                    collisionList[num_collisions].t = t;
+                    num_collisions++;
+                    if (num_collisions == MAX_COLLISIONS)
+                    {
+                        fprintf(stderr, "ERROR! MAX_COLLISIONS was reached!\n");
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
 bool solveQuadratic(jfloat a, jfloat b, jfloat c, jfloat *x)
 {
     jfloat d = b * b - 4 * a * c;
