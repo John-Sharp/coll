@@ -693,6 +693,19 @@ bool test_removeCollisionsInvolvingObjects()
 // * test handlers put their index on a special `testHandlerLedger`, use function `registerHandlerFired(id)`
 // * check the ledger against what is expected
 // * check that the handlers are passed the correct arguments
+
+typedef struct testHandlerArgumentsExpected
+{
+    juint objectIndicies[2];
+    jfloat t;
+} testHandlerArgumentsExpected;
+
+typedef struct testHandlerArgumentsReceived
+{
+    jcObject * objects[2];
+    jfloat t;
+} testHandlerArgumentsReceived;
+
 typedef struct processCollisionsTestCase
 {
     juint numPairings;
@@ -701,57 +714,96 @@ typedef struct processCollisionsTestCase
 
     juint numHandlerCallsExpected;
     juint handlerIdsExpected[10];
+    testHandlerArgumentsExpected handlerArgumentsExpected[10];
 } processCollisionsTestCase;
 
-jcPairing * fillPairing(jcPairing * p, completeObject * objs)
+typedef struct testHandlerContext
+{
+    juint numHandlersCalled;
+    juint handlerIndicies[10];
+    testHandlerArgumentsReceived handlerArgumentsReceived[10];
+} testHandlerContext;
+
+jcPairing * fillPairing(jcPairing * p, completeObject * objs, void * ctx)
 {
     p->objects[0] = fillObject(&objs[0]);
+    p->objects[0]->owner = ctx;
     p->objects[1] = fillObject(&objs[1]);
+    p->objects[1]->owner = ctx;
 
     return p;
 }
 
-typedef struct testHandlerLedger
-{
-    juint numHandlersCalled;
-    juint handlerIndicies[10];
-} testHandlerLedger;
-testHandlerLedger globalTestHandlerLedger;
-
-void registerHandlerFired(juint index)
-{
-    if (globalTestHandlerLedger.numHandlersCalled < ARRAY_SIZE(globalTestHandlerLedger.handlerIndicies))
-    {
-        globalTestHandlerLedger.handlerIndicies[globalTestHandlerLedger.numHandlersCalled] = index;
-    }
-
-    globalTestHandlerLedger.numHandlersCalled++;
-}
-
 void testHandler1(jcObject ** objects, jfloat t)
 {
-    registerHandlerFired(1);
+    testHandlerContext * ctx = objects[0]->owner;
+    ctx->handlerIndicies[ctx->numHandlersCalled] = 1;
+    ctx->handlerArgumentsReceived[ctx->numHandlersCalled].objects[0] = objects[0];
+    ctx->handlerArgumentsReceived[ctx->numHandlersCalled].objects[1] = objects[1];
+    ctx->handlerArgumentsReceived[ctx->numHandlersCalled].t = t;
+    ctx->numHandlersCalled++;
+
     objects[0]->shape.circle->c[0] = -5;
+
 }
 
-bool test_processCollisionsTestCase()
+bool test_processCollisions()
 {
     juint i;
 #include "testCases/processCollisions.inc"
 
     for (i = 0; i < ARRAY_SIZE(tcs); i++)
     {
-        globalTestHandlerLedger.numHandlersCalled = 0;
         jcPairingList * p = NULL;
+        testHandlerContext context;
+        context.numHandlersCalled = 0;
 
         juint j;
         for (j = 0; j < tcs[i].numPairings; j++)
         {
-            p = jcPairingListAdd(p, fillPairing(&(tcs[i].pairingList[j]), &(tcs[i].completeObjectList[2*j])));
+            p = jcPairingListAdd(p, fillPairing(&(tcs[i].pairingList[j]), &(tcs[i].completeObjectList[2*j]), &context));
         }
 
         jcEng testEng = {pairingList:p};
         processCollisions(&testEng);
+
+        if (context.numHandlersCalled != tcs[i].numHandlerCallsExpected)
+        {
+            printf("TEST FAILED test_processCollisions(%u): number of handlers  actually called %u, expected %u\n",
+                    i, context.numHandlersCalled, tcs[i].numHandlerCallsExpected);
+            return false;
+        }
+
+        for (j = 0; j < context.numHandlersCalled; j++)
+        {
+            if (context.handlerIndicies[j] != tcs[i].handlerIdsExpected[j])
+            {
+                printf("TEST FAILED test_processCollisions(%u), %u th handler called: got handler with index %u, expected %u\n",
+                        i, j, context.handlerIndicies[j], tcs[i].handlerIdsExpected[j]);
+                return false;
+            }
+
+            testHandlerArgumentsExpected * expectedArguments = &tcs[i].handlerArgumentsExpected[j];
+            testHandlerArgumentsReceived * receivedArguments = &context.handlerArgumentsReceived[j];
+
+            if (receivedArguments->objects[0] != &tcs[i].completeObjectList[expectedArguments->objectIndicies[0]].obj)
+            {
+                printf("TEST FAILED test_processCollisions(%u), when %u th handler (id: %u) called: didn't get expected object[0] index: %u\n",
+                        i, j, context.handlerIndicies[j], expectedArguments->objectIndicies[0]);
+            }
+
+            if (receivedArguments->objects[1] != &tcs[i].completeObjectList[expectedArguments->objectIndicies[1]].obj)
+            {
+                printf("TEST FAILED test_processCollisions(%u), when %u th handler (id: %u) called: didn't get expected object[1] index: %u\n",
+                        i, j, context.handlerIndicies[j], expectedArguments->objectIndicies[1]);
+            }
+
+            if (receivedArguments->t != expectedArguments->t)
+            {
+                printf("TEST FAILED test_processCollisions(%u), when %u th handler (id: %u) called: didn't get expected t: %f, got: %f\n",
+                        i, j, context.handlerIndicies[j], expectedArguments->t, receivedArguments->t);
+            }
+        }
     }
 
     return true;
@@ -996,5 +1048,5 @@ int main()
     test_checkCollision();
     test_sortCollisionList();
     test_removeCollisionsInvolvingObjects();
-    test_processCollisionsTestCase();
+    test_processCollisions();
 }
