@@ -280,6 +280,13 @@ void removeCollisionsInvolvingObjects(collision * collisionList, juint numCollis
                 cc->t = 2;
                 break;
             }
+
+            if (cc->pairing->objects[1] == objectList[j])
+            {
+                *numCollisionsRemoved += 1;
+                cc->t = 2;
+                break;
+            }
         }
     }
 }

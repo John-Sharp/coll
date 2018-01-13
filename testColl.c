@@ -658,8 +658,8 @@ bool test_removeCollisionsInvolvingObjects()
                     return false;
                 }
 
-                if (!((tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[0] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[1])
-                            || (tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[1] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[0])))
+                if (!((tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[0] || tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[1])
+                            || (tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[1] || tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[0])))
                 {
                     printf("TEST FAILED test_removeCollisionsInvolvingObjects(%u): collision removed without objects matching, collision obj1: %p, collision obj2: %p; obj1: %p, obj2: %p\n",
                             i, tcs[i].collisionList[j].pairing->objects[0], tcs[i].collisionList[j].pairing->objects[1], tcs[i].objectList[0], tcs[i].objectList[1]);
@@ -667,8 +667,8 @@ bool test_removeCollisionsInvolvingObjects()
                 }
                 k++;
             }
-            else if ((tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[0] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[1])
-                            || (tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[1] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[0]))
+            else if ((tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[0] || tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[1])
+                            || (tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[1] || tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[0]))
             {
                     printf("TEST FAILED test_removeCollisionsInvolvingObjects(%u): collision not removed with objects matching, collision obj1: %p, collision obj2: %p; obj1: %p, obj2: %p\n",
                             i, tcs[i].collisionList[j].pairing->objects[0], tcs[i].collisionList[j].pairing->objects[1], tcs[i].objectList[0], tcs[i].objectList[1]);
