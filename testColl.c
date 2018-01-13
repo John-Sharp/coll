@@ -706,11 +706,19 @@ typedef struct testHandlerArgumentsReceived
     jfloat t;
 } testHandlerArgumentsReceived;
 
+typedef struct testHandlerAction
+{
+    jvec r[2];
+    jvec v[2];
+} testHandlerAction;
+
 typedef struct processCollisionsTestCase
 {
     juint numPairings;
     completeObject completeObjectList[20];
+    juint pairingObjectIndicies[20];
     jcPairing pairingList[10];
+    testHandlerAction actionList[10];
 
     juint numHandlerCallsExpected;
     juint handlerIdsExpected[10];
@@ -722,13 +730,15 @@ typedef struct testHandlerContext
     juint numHandlersCalled;
     juint handlerIndicies[10];
     testHandlerArgumentsReceived handlerArgumentsReceived[10];
+
+    testHandlerAction * actionList;
 } testHandlerContext;
 
-jcPairing * fillPairing(jcPairing * p, completeObject * objs, void * ctx)
+jcPairing * fillPairing(jcPairing * p, juint * pairingObjectIndicies, completeObject * objs, void * ctx)
 {
-    p->objects[0] = fillObject(&objs[0]);
+    p->objects[0] = fillObject(&objs[pairingObjectIndicies[0]]);
     p->objects[0]->owner = ctx;
-    p->objects[1] = fillObject(&objs[1]);
+    p->objects[1] = fillObject(&objs[pairingObjectIndicies[1]]);
     p->objects[1]->owner = ctx;
 
     return p;
@@ -741,10 +751,49 @@ void testHandler1(jcObject ** objects, jfloat t)
     ctx->handlerArgumentsReceived[ctx->numHandlersCalled].objects[0] = objects[0];
     ctx->handlerArgumentsReceived[ctx->numHandlersCalled].objects[1] = objects[1];
     ctx->handlerArgumentsReceived[ctx->numHandlersCalled].t = t;
+
+    if (objects[0]->shapeType == SHAPE_TYPE_CIRCLE)
+    {
+        objects[0]->shape.circle->c[0] = ctx->actionList[ctx->numHandlersCalled].r[0][0];
+        objects[0]->shape.circle->c[1] = ctx->actionList[ctx->numHandlersCalled].r[0][1];
+    }
+    else
+    {
+        jfloat w = objects[0]->shape.rect->tr[0] - objects[0]->shape.rect->bl[0];
+        jfloat h = objects[0]->shape.rect->tr[1] - objects[0]->shape.rect->bl[1];
+
+        objects[0]->shape.rect->bl[0] = ctx->actionList[ctx->numHandlersCalled].r[0][0];
+        objects[0]->shape.rect->bl[1] = ctx->actionList[ctx->numHandlersCalled].r[0][1];
+
+        objects[0]->shape.rect->tr[0] = objects[0]->shape.rect->bl[0] + w;
+        objects[0]->shape.rect->tr[1] = objects[0]->shape.rect->bl[1] + h;
+    }
+
+    
+    *(objects[0]->v)[0] = ctx->actionList[ctx->numHandlersCalled].v[0][0];
+    *(objects[0]->v)[1] = ctx->actionList[ctx->numHandlersCalled].v[0][1];
+
+    if (objects[1]->shapeType == SHAPE_TYPE_CIRCLE)
+    {
+
+        objects[1]->shape.circle->c[0] = ctx->actionList[ctx->numHandlersCalled].r[1][0];
+        objects[1]->shape.circle->c[1] = ctx->actionList[ctx->numHandlersCalled].r[1][1];
+    }
+    else
+    {
+        jfloat w = objects[1]->shape.rect->tr[0] - objects[1]->shape.rect->bl[0];
+        jfloat h = objects[1]->shape.rect->tr[1] - objects[1]->shape.rect->bl[1];
+
+        objects[1]->shape.rect->bl[0] = ctx->actionList[ctx->numHandlersCalled].r[1][0];
+        objects[1]->shape.rect->bl[1] = ctx->actionList[ctx->numHandlersCalled].r[1][1];
+
+        objects[1]->shape.rect->tr[0] = objects[1]->shape.rect->bl[0] + w;
+        objects[1]->shape.rect->tr[1] = objects[1]->shape.rect->bl[1] + h;
+    }
+
+    *(objects[1]->v)[0] = ctx->actionList[ctx->numHandlersCalled].v[1][0];
+    *(objects[1]->v)[1] = ctx->actionList[ctx->numHandlersCalled].v[1][1];
     ctx->numHandlersCalled++;
-
-    objects[0]->shape.circle->c[0] = -5;
-
 }
 
 bool test_processCollisions()
@@ -757,11 +806,13 @@ bool test_processCollisions()
         jcPairingList * p = NULL;
         testHandlerContext context;
         context.numHandlersCalled = 0;
+        context.actionList = tcs[i].actionList;
+
 
         juint j;
         for (j = 0; j < tcs[i].numPairings; j++)
         {
-            p = jcPairingListAdd(p, fillPairing(&(tcs[i].pairingList[j]), &(tcs[i].completeObjectList[2*j]), &context));
+            p = jcPairingListAdd(p, fillPairing(&(tcs[i].pairingList[j]), &(tcs[i].pairingObjectIndicies[2*j]), tcs[i].completeObjectList, &context));
         }
 
         jcEng testEng = {pairingList:p};

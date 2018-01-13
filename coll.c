@@ -228,7 +228,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
         if (circleWithCircleCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.circle, &t_temp) &&
                 t_temp <= tRem)
         {
-            *t = t_temp;
+            *t = t_temp + (1-tRem);
             return true;
         }
         return false;
@@ -240,7 +240,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
         if (circleWithRectCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.rect, &t_temp) &&
                 t_temp <= tRem)
         {
-            *t = t_temp;
+            *t = t_temp + (1-tRem);
             return true;
         }
         return false;
@@ -254,7 +254,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
         if (circleWithRectCollDetect(*pairing->objects[1]->shape.circle, v, *pairing->objects[0]->shape.rect, &t_temp) &&
                 t_temp <= tRem)
         {
-            *t = t_temp;
+            *t = t_temp + (1-tRem);
             return true;
         }
         return false;
@@ -338,7 +338,7 @@ void processCollisions(jcEng * eng)
             {
                 if (checkCollision(pairing, tRem, &t))
                 {
-                    collisionList[num_collisions].pairing;
+                    collisionList[num_collisions].pairing = pairing;
                     collisionList[num_collisions].t = t;
                     num_collisions++;
                     if (num_collisions == MAX_COLLISIONS)

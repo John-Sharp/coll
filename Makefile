@@ -1,5 +1,5 @@
 test: generateListCode testColl.c coll.c coll.h
-	gcc testColl.c -lm -o test
+	gcc testColl.c -g -lm -o test
 
 generateListCode: templates/listTemplate.h templates/listTemplate.c
 	sed templates/listTemplate.h -e "s/<pf>/jcObject/g" -e "s/<tp>/jcObject/g" > listHeaders/jcObjectList.h
