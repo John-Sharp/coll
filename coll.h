@@ -33,8 +33,8 @@ typedef struct jcObject
   SHAPE_TYPE shapeType;
   union shape 
   {
-    const jcircle * circle;
-    const jrect * rect;
+    jcircle * circle;
+    jrect * rect;
   } shape;
 
   jvec * v;
@@ -70,8 +70,8 @@ typedef struct jcEng
 jcEng * initJcEng(jcEng * eng);
 
 bool registerCollHandler(jcEng * eng, juint groupNum1, juint groupNum2, collHandler handler);
-bool registerCircle(jcEng * eng, const jcircle * c, jvec * v, juint groupNum, void * owner);
-bool registerRect(jcEng * eng, const jrect * r, jvec * v, juint groupNum, void * owner);
+bool registerCircle(jcEng * eng, jcircle * c, jvec * v, juint groupNum, void * owner);
+bool registerRect(jcEng * eng, jrect * r, jvec * v, juint groupNum, void * owner);
 
 void processCollisions(jcEng * eng);
 

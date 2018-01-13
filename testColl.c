@@ -685,6 +685,78 @@ bool test_removeCollisionsInvolvingObjects()
     }
 }
 
+// TODO test_processCollisions 
+// * testcase: list of pairings, list of id's of test handlers that should be called
+// * make the completePairings into a pairing list and put this on a test engine
+// * test handlers resolve a collision in a way determined by test
+// * call `processCollisions` on this test engine
+// * test handlers put their index on a special `testHandlerLedger`, use function `registerHandlerFired(id)`
+// * check the ledger against what is expected
+// * check that the handlers are passed the correct arguments
+typedef struct processCollisionsTestCase
+{
+    juint numPairings;
+    completeObject completeObjectList[20];
+    jcPairing pairingList[10];
+
+    juint numHandlerCallsExpected;
+    juint handlerIdsExpected[10];
+} processCollisionsTestCase;
+
+jcPairing * fillPairing(jcPairing * p, completeObject * objs)
+{
+    p->objects[0] = fillObject(&objs[0]);
+    p->objects[1] = fillObject(&objs[1]);
+
+    return p;
+}
+
+typedef struct testHandlerLedger
+{
+    juint numHandlersCalled;
+    juint handlerIndicies[10];
+} testHandlerLedger;
+testHandlerLedger globalTestHandlerLedger;
+
+void registerHandlerFired(juint index)
+{
+    if (globalTestHandlerLedger.numHandlersCalled < ARRAY_SIZE(globalTestHandlerLedger.handlerIndicies))
+    {
+        globalTestHandlerLedger.handlerIndicies[globalTestHandlerLedger.numHandlersCalled] = index;
+    }
+
+    globalTestHandlerLedger.numHandlersCalled++;
+}
+
+void testHandler1(jcObject ** objects, jfloat t)
+{
+    registerHandlerFired(1);
+    objects[0]->shape.circle->c[0] = -5;
+}
+
+bool test_processCollisionsTestCase()
+{
+    juint i;
+#include "testCases/processCollisions.inc"
+
+    for (i = 0; i < ARRAY_SIZE(tcs); i++)
+    {
+        globalTestHandlerLedger.numHandlersCalled = 0;
+        jcPairingList * p = NULL;
+
+        juint j;
+        for (j = 0; j < tcs[i].numPairings; j++)
+        {
+            p = jcPairingListAdd(p, fillPairing(&(tcs[i].pairingList[j]), &(tcs[i].completeObjectList[2*j])));
+        }
+
+        jcEng testEng = {pairingList:p};
+        processCollisions(&testEng);
+    }
+
+    return true;
+}
+
 typedef struct circleWithCircleCollDetectTestCase
 {
     jcircle c1;
@@ -924,4 +996,5 @@ int main()
     test_checkCollision();
     test_sortCollisionList();
     test_removeCollisionsInvolvingObjects();
+    test_processCollisionsTestCase();
 }
