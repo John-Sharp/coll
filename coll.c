@@ -17,6 +17,26 @@ jcEng * initJcEng(jcEng * eng)
     eng->registeredCollHandlerList = NULL;
 }
 
+void jcObjectTranslate(jcObject *object, jvec v)
+{
+    if (object->shapeType == SHAPE_TYPE_CIRCLE)
+    {
+        object->shape.circle->c[0] += v[0];
+        object->shape.circle->c[1] += v[1];
+    }
+    else
+    {
+        jfloat w = object->shape.rect->tr[0] - object->shape.rect->bl[0];
+        jfloat h = object->shape.rect->tr[1] - object->shape.rect->bl[1];
+
+        object->shape.rect->bl[0] += v[0];
+        object->shape.rect->bl[1] += v[1];
+
+        object->shape.rect->tr[0] = object->shape.rect->bl[0] + w;
+        object->shape.rect->tr[1] = object->shape.rect->bl[1] + h;
+    }
+}
+
 bool pairingGroupNumCmp(const jcPairing * a, const jcPairing * b)
 {
     if ((a->objects[0]->groupNum == b->objects[0]->groupNum)
@@ -213,6 +233,7 @@ int clCompar(const void * a, const void * b)
     return -1;
 }
 
+#include <stdio.h>
 bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
 {
     jvec v;
@@ -226,9 +247,9 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
             && pairing->objects[1]->shapeType == SHAPE_TYPE_CIRCLE)
     {
         if (circleWithCircleCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.circle, &t_temp) &&
-                t_temp <= tRem)
+                t_temp >= (1-tRem))
         {
-            *t = t_temp + (1-tRem);
+            *t = t_temp;// + (1-tRem);
             return true;
         }
         return false;
@@ -238,9 +259,9 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
             && pairing->objects[1]->shapeType == SHAPE_TYPE_RECT))
     {
         if (circleWithRectCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.rect, &t_temp) &&
-                t_temp <= tRem)
+                t_temp > (1-tRem))
         {
-            *t = t_temp + (1-tRem);
+            *t = t_temp;// + (1-tRem);
             return true;
         }
         return false;
@@ -252,9 +273,9 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
         v[0] *= -1;
         v[1] *= -1;
         if (circleWithRectCollDetect(*pairing->objects[1]->shape.circle, v, *pairing->objects[0]->shape.rect, &t_temp) &&
-                t_temp <= tRem)
+                t_temp > (1-tRem))
         {
-            *t = t_temp + (1-tRem);
+            *t = t_temp; // + (1-tRem);
             return true;
         }
         return false;
@@ -319,10 +340,19 @@ void processCollisions(jcEng * eng)
     while (num_collisions > 0)
     {
         qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
+        jfloat tColl = collisionList[0].t;
         jfloat tRem = 1 - collisionList[0].t; 
 
         // resolve earliest collision
         collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t);
+
+        // retard pairing->objects v t
+        jvec v = {*(collisionList[0].pairing->objects[0]->v)[0] * -tColl, *(collisionList[0].pairing->objects[0]->v)[1] * -tColl};
+        jcObjectTranslate(collisionList[0].pairing->objects[0], v);
+
+        v[0] = *(collisionList[0].pairing->objects[1]->v)[0] * -tColl;
+        v[1] = *(collisionList[0].pairing->objects[1]->v)[1] * -tColl;
+        jcObjectTranslate(collisionList[0].pairing->objects[0], v);
 
         // remove collisions involving objects in collision that has just been resolved
         juint numCollisionsRemoved = 0;
@@ -343,6 +373,7 @@ void processCollisions(jcEng * eng)
                     || pairing->objects[1] == collisionList[0].pairing->objects[0]
                     || pairing->objects[1] == collisionList[0].pairing->objects[1])
             {
+                // n.b. need to ignore collisions before t_last
                 if (checkCollision(pairing, tRem, &t))
                 {
                     collisionList[num_collisions].pairing = pairing;

@@ -44,6 +44,8 @@ typedef struct jcObject
 
 } jcObject;
 
+void jcObjectTranslate(jcObject *object, jvec v);
+
 typedef void (*collHandler)(jcObject ** objects, jfloat t);
 
 typedef struct jcPairing

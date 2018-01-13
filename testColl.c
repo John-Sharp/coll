@@ -849,7 +849,7 @@ bool test_processCollisions()
                         i, j, context.handlerIndicies[j], expectedArguments->objectIndicies[1]);
             }
 
-            if (receivedArguments->t != expectedArguments->t)
+            if ((receivedArguments->t - expectedArguments->t) * (receivedArguments->t - expectedArguments->t) > DELTA * DELTA)
             {
                 printf("TEST FAILED test_processCollisions(%u), when %u th handler (id: %u) called: didn't get expected t: %f, got: %f\n",
                         i, j, context.handlerIndicies[j], expectedArguments->t, receivedArguments->t);

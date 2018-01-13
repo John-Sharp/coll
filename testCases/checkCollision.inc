@@ -12,15 +12,14 @@ checkCollisionTestCase tcs[] = {
     },
     {obj1: { shape: {circle: {{0,0}, 1}}, v: {5,0}, obj: {shapeType: SHAPE_TYPE_CIRCLE}},
      obj2: { shape: {circle: {{3,0}, 1}}, v: {0,0}, obj: {shapeType: SHAPE_TYPE_CIRCLE}},
-     tRem: 0.2,
+     tRem: 0.8,
      collExpected: true,
-     tExpected: 1.0
+     tExpected: 0.2
     },
     {obj1: { shape: {circle: {{0,0}, 1}}, v: {5,0}, obj: {shapeType: SHAPE_TYPE_CIRCLE}},
      obj2: { shape: {circle: {{3,0}, 1}}, v: {0,0}, obj: {shapeType: SHAPE_TYPE_CIRCLE}},
-     tRem: 0.3,
-     collExpected: true,
-     tExpected: 0.9
+     tRem: 0.7,
+     collExpected: false,
     },
     {obj1: { shape: {circle: {{0,0}, 1}}, v: {2,0}, obj: {shapeType: SHAPE_TYPE_CIRCLE}},
      obj2: { shape: {circle: {{3,0}, 1}}, v: {-3,0}, obj: {shapeType: SHAPE_TYPE_CIRCLE}},
