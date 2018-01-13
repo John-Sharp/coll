@@ -606,12 +606,84 @@ bool test_sortCollisionList()
            {
                 printf("TEST FAILED test_sortCollisionList(%u): collisionList[%u].t: %f, collisionList[%u].t: %f\n",
                         i, j, tcs[i].collisionList[j].t, j+1, tcs[i].collisionList[j+1].t);
+                return false;
            }
         }
     }
+    return true;
 }
 
-// TODO test_removeCollisionsInvolvingObjects
+typedef struct removeCollisionsInvolvingObjectsTestCase
+{
+    juint numCollisions;
+    jcPairing pairings[MAX_COLLISIONS];
+    collision collisionList[MAX_COLLISIONS];
+    jcObject * objectList[2];
+    juint numCollisionsRemovedExpected;
+    juint collisionsRemovedIndicies[MAX_COLLISIONS];
+} removeCollisionsInvolvingObjectsTestCase;
+
+
+bool test_removeCollisionsInvolvingObjects()
+{
+    juint i;
+#include "testCases/removeCollisionsInvolvingObjects.inc"
+
+    for (i = 0; i < ARRAY_SIZE(tcs); i++)
+    {
+        juint j;
+        for (j = 0; j < tcs[i].numCollisions; j++)
+        {
+            tcs[i].collisionList[j].pairing = &tcs[i].pairings[j];
+        }
+
+        juint numCollisionsRemoved;
+        removeCollisionsInvolvingObjects(tcs[i].collisionList, tcs[i].numCollisions, tcs[i].objectList, 2, &numCollisionsRemoved);
+
+        if (numCollisionsRemoved != tcs[i].numCollisionsRemovedExpected)
+        {
+            printf("TEST FAILED test_removeCollisionsInvolvingObjects(%u): numCollisionsRemoved: %u, numCollisionsRemovedExpected: %u\n",
+                    i, numCollisionsRemoved, tcs[i].numCollisionsRemovedExpected);
+        }
+
+        juint k = 0;
+        for (j = 0; j < tcs[i].numCollisions; j++)
+        {
+            if (tcs[i].collisionList[j].t == 2) // this t signifies element has been removed
+            {
+                if (j != tcs[i].collisionsRemovedIndicies[k])
+                {
+                    printf("TEST FAILED test_removeCollisionsInvolvingObjects(%u): expected %u th removed index to be %u, instead was %u \n",
+                            i, k, tcs[i].collisionsRemovedIndicies[k], j);
+                    return false;
+                }
+
+                if (!((tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[0] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[1])
+                            || (tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[1] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[0])))
+                {
+                    printf("TEST FAILED test_removeCollisionsInvolvingObjects(%u): collision removed without objects matching, collision obj1: %p, collision obj2: %p; obj1: %p, obj2: %p\n",
+                            i, tcs[i].collisionList[j].pairing->objects[0], tcs[i].collisionList[j].pairing->objects[1], tcs[i].objectList[0], tcs[i].objectList[1]);
+                    return false;
+                }
+                k++;
+            }
+            else if ((tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[0] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[1])
+                            || (tcs[i].collisionList[j].pairing->objects[0] == tcs[i].objectList[1] && tcs[i].collisionList[j].pairing->objects[1] == tcs[i].objectList[0]))
+            {
+                    printf("TEST FAILED test_removeCollisionsInvolvingObjects(%u): collision not removed with objects matching, collision obj1: %p, collision obj2: %p; obj1: %p, obj2: %p\n",
+                            i, tcs[i].collisionList[j].pairing->objects[0], tcs[i].collisionList[j].pairing->objects[1], tcs[i].objectList[0], tcs[i].objectList[1]);
+                    return false;
+            }
+        }
+
+        if (k != tcs[i].numCollisionsRemovedExpected)
+        {
+            printf("TEST FAILED test_removeCollisionsInvolvingObjects(%u): number of colllisions actually removed %u, expected %u\n",
+                    i, k, tcs[i].numCollisionsRemovedExpected); 
+            return false;
+        }
+    }
+}
 
 typedef struct circleWithCircleCollDetectTestCase
 {
@@ -851,4 +923,5 @@ int main()
     test_jcEngRegistrations();
     test_checkCollision();
     test_sortCollisionList();
+    test_removeCollisionsInvolvingObjects();
 }
