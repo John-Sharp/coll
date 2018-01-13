@@ -212,6 +212,7 @@ typedef struct collision
 {
     jcPairing * pairing;
     jfloat t;
+    JC_SIDE side;
 } collision;
 
 enum { MAX_COLLISIONS = 40 };
@@ -223,6 +224,7 @@ void initCollisionList(collision * cl)
     {
         cl[i].pairing = NULL;
         cl[i].t = 2;
+        cl[i].side = JC_SIDE_NONE;
     }
 }
 
@@ -234,7 +236,7 @@ int clCompar(const void * a, const void * b)
 }
 
 #include <stdio.h>
-bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
+bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t, JC_SIDE * side)
 {
     jvec v;
     jfloat t_temp;
@@ -258,7 +260,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
     if ((pairing->objects[0]->shapeType == SHAPE_TYPE_CIRCLE
             && pairing->objects[1]->shapeType == SHAPE_TYPE_RECT))
     {
-        if (circleWithRectCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.rect, &t_temp) &&
+        if (circleWithRectCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.rect, &t_temp, side) &&
                 t_temp > (1-tRem))
         {
             *t = t_temp;// + (1-tRem);
@@ -272,7 +274,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t)
     {
         v[0] *= -1;
         v[1] *= -1;
-        if (circleWithRectCollDetect(*pairing->objects[1]->shape.circle, v, *pairing->objects[0]->shape.rect, &t_temp) &&
+        if (circleWithRectCollDetect(*pairing->objects[1]->shape.circle, v, *pairing->objects[0]->shape.rect, &t_temp, side) &&
                 t_temp > (1-tRem))
         {
             *t = t_temp; // + (1-tRem);
@@ -324,10 +326,12 @@ void processCollisions(jcEng * eng)
         jcPairing * pairing = p->val;
 
         jfloat t;
-        if (checkCollision(pairing, 1.0, &t))
+        JC_SIDE side;
+        if (checkCollision(pairing, 1.0, &t, &side))
         {
             collisionList[num_collisions].pairing = pairing;
             collisionList[num_collisions].t = t;
+            collisionList[num_collisions].side = side;
             num_collisions++;
             if (num_collisions == MAX_COLLISIONS)
             {
@@ -344,7 +348,7 @@ void processCollisions(jcEng * eng)
         jfloat tRem = 1 - collisionList[0].t; 
 
         // resolve earliest collision
-        collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t);
+        collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t, collisionList[0].side);
 
         // retard pairing->objects v t
         jvec v = {*(collisionList[0].pairing->objects[0]->v)[0] * -tColl, *(collisionList[0].pairing->objects[0]->v)[1] * -tColl};
@@ -373,11 +377,12 @@ void processCollisions(jcEng * eng)
                     || pairing->objects[1] == collisionList[0].pairing->objects[0]
                     || pairing->objects[1] == collisionList[0].pairing->objects[1])
             {
-                // n.b. need to ignore collisions before t_last
-                if (checkCollision(pairing, tRem, &t))
+                JC_SIDE side;
+                if (checkCollision(pairing, tRem, &t, &side))
                 {
                     collisionList[num_collisions].pairing = pairing;
                     collisionList[num_collisions].t = t;
+                    collisionList[num_collisions].side = side;
                     num_collisions++;
                     if (num_collisions == MAX_COLLISIONS)
                     {
@@ -387,6 +392,16 @@ void processCollisions(jcEng * eng)
                 }
             }
         }
+    }
+}
+
+void integrate(jcEng * eng)
+{
+    jcObjectList * p;
+
+    for (p = eng->objectList; p != NULL; p = p->next)
+    {
+        jcObjectTranslate(p->val, *p->val->v);
     }
 }
 
@@ -533,39 +548,67 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
     return getDesiredSolutionIfExtant(tt, 2, t);
 }
 
-bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc)
+bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc, JC_SIDE * collSide)
 {
     jfloat h = r.tr[1] - r.bl[1];
     jfloat w = r.tr[0] - r.bl[0];
-    jfloat t[4];
-    int num_collisions = 0;
+    jfloat t = 2;
+    jfloat tTemp = 2;
+    JC_SIDE side = JC_SIDE_NONE;
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.bl, h, AXIS_Y, &t[num_collisions]))
+    if (circleWithAxisParallelSegCollDetect(c, v, r.bl, h, AXIS_Y, &tTemp))
     {
-        num_collisions += 1;
+        side = JC_SIDE_L;
+        t = tTemp;
     }
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.tr, -h, AXIS_Y, &t[num_collisions]))
+    if (circleWithAxisParallelSegCollDetect(c, v, r.tr, -h, AXIS_Y, &tTemp))
     {
-        num_collisions += 1;
+        if (tTemp < t)
+        {
+            side = JC_SIDE_R;
+            t = tTemp;
+        }
+        if (tTemp == t)
+        {
+            side |= JC_SIDE_R;
+        }
     }
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.bl, w, AXIS_X, &t[num_collisions]))
+    if (circleWithAxisParallelSegCollDetect(c, v, r.bl, w, AXIS_X, &tTemp))
     {
-        num_collisions += 1;
+        if (tTemp < t)
+        {
+            side = JC_SIDE_B;
+            t = tTemp;
+        }
+        if (tTemp == t)
+        {
+            side |= JC_SIDE_B;
+        }
     }
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.tr, -w, AXIS_X, &t[num_collisions]))
+    if (circleWithAxisParallelSegCollDetect(c, v, r.tr, -w, AXIS_X, &tTemp))
     {
-        num_collisions += 1;
+        if (tTemp < t)
+        {
+            side = JC_SIDE_T;
+            t = tTemp;
+        }
+        if (tTemp == t)
+        {
+            side |= JC_SIDE_T;
+        }
     }
 
-    if (num_collisions == 0)
+    if (side == JC_SIDE_NONE)
     {
         return false;
     }
 
-    return getDesiredSolutionIfExtant(t, num_collisions, tc);
+    *tc = t;
+    *collSide = side;
+    return true;
 }
 
 /**

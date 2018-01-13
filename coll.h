@@ -28,6 +28,15 @@ typedef enum SHAPE_TYPE
   SHAPE_TYPE_RECT
 } SHAPE_TYPE;
 
+typedef enum JC_SIDE
+{
+    JC_SIDE_NONE = 0,
+    JC_SIDE_L = 1,
+    JC_SIDE_R = 1<<1,
+    JC_SIDE_B = 1<<2,
+    JC_SIDE_T = 1<<3
+} JC_SIDE;
+
 typedef struct jcObject
 {
   SHAPE_TYPE shapeType;
@@ -46,7 +55,7 @@ typedef struct jcObject
 
 void jcObjectTranslate(jcObject *object, jvec v);
 
-typedef void (*collHandler)(jcObject ** objects, jfloat t);
+typedef void (*collHandler)(jcObject ** objects, jfloat t, JC_SIDE side);
 
 typedef struct jcPairing
 {
@@ -85,7 +94,7 @@ typedef enum AXIS
 } AXIS;
 
 bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t);
-bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * t);
+bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * t, JC_SIDE * side);
 bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AXIS ax, jfloat * t);
 
 typedef enum COLL_TYPE

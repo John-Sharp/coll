@@ -38,7 +38,8 @@ processCollisionsTestCase tcs[] = {
         handlerArgumentsExpected: {
             {
                 objectIndicies: {0, 1},
-                t: 0.2
+                t: 0.2,
+                side: JC_SIDE_NONE
             },
         }
     },
@@ -72,11 +73,13 @@ processCollisionsTestCase tcs[] = {
         handlerArgumentsExpected: {
             {
                 objectIndicies: {0, 1},
-                t: 0.2
+                t: 0.2,
+                side: JC_SIDE_NONE
             },
             {
                 objectIndicies: {0, 2},
-                t: 0.2 + 1/6. 
+                t: 0.2 + 1/6., 
+                side: JC_SIDE_NONE
             },
         }
     },
@@ -109,7 +112,8 @@ processCollisionsTestCase tcs[] = {
         handlerArgumentsExpected: {
             {
                 objectIndicies: {0, 1},
-                t: 0.1
+                t: 0.1,
+                side: JC_SIDE_NONE
             },
         }
     },
@@ -142,7 +146,8 @@ processCollisionsTestCase tcs[] = {
         handlerArgumentsExpected: {
             {
                 objectIndicies: {0, 2},
-                t: 0.1
+                t: 0.1,
+                side: JC_SIDE_L
             },
         }
     },
