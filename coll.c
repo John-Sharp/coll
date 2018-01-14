@@ -6,15 +6,76 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+typedef struct jcPairing
+{
+  jcObject * objects[2];
+  collHandler handler;
+} jcPairing;
+
+typedef struct jcRegisteredCollHandler
+{
+  juint groupNums[2];
+  collHandler handler;
+} jcRegisteredCollHandler;
+
+#include "listHeaders/jcObjectList.h"
+#include "listHeaders/jcPairingList.h"
+#include "listHeaders/jcRegisteredCollHandlerList.h"
+typedef struct jcEngInternal
+{
+  jcObjectList * objectList;
+  jcPairingList * pairingList;
+  jcRegisteredCollHandlerList * registeredCollHandlerList;
+} jcEngInternal;
+jcEngInternal * initJcEngInternal(jcEngInternal * eng);
+
+void processCollisions(jcEngInternal * eng);
+
+typedef enum AXIS
+{
+    AXIS_X = 0,
+    AXIS_Y = 1,
+    NUM_AXIS = 2
+} AXIS;
+
+bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t);
+bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * t, JC_SIDE * side);
+bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AXIS ax, jfloat * t);
+
+typedef enum COLL_TYPE
+{
+    COLL_TYPE_NONE,
+    COLL_TYPE_SMALL_SIDE,
+    COLL_TYPE_LONG_SIDE,
+    COLL_TYPE_INSIDE
+} COLL_TYPE;
+
+typedef struct oneDimCollObj
+{
+    COLL_TYPE coll_type;
+    float t_start;
+    float t_end;
+} oneDimCollObj;
+
+oneDimCollObj oneDCollDetect(uint32_t a, int32_t b1, int32_t b2, int32_t v);
+
 #include "listCode/jcObjectList.c"
 #include "listCode/jcPairingList.c"
 #include "listCode/jcRegisteredCollHandlerList.c"
 
-jcEng * initJcEng(jcEng * eng)
+jcEngInternal * initJcEng(jcEngInternal * eng)
 {
     eng->objectList = NULL;
     eng->pairingList = NULL;
     eng->registeredCollHandlerList = NULL;
+}
+
+jcEng * createJcEng()
+{
+    jcEngInternal * eng = malloc(sizeof(*eng));
+    initJcEng(eng);
+
+    return (jcEng *)eng;
 }
 
 void jcObjectTranslate(jcObject *object, jvec v)
@@ -50,7 +111,7 @@ bool pairingGroupNumCmp(const jcPairing * a, const jcPairing * b)
     return false;
 }
 
-void removePairings(jcEng * eng, juint groupNum1, juint groupNum2)
+void removePairings(jcEngInternal * eng, juint groupNum1, juint groupNum2)
 {
     jcPairing * removedVal = NULL;
     jcObject testObjects[2] = {{groupNum : groupNum1}, {groupNum : groupNum2}};
@@ -65,7 +126,7 @@ void removePairings(jcEng * eng, juint groupNum1, juint groupNum2)
     }
 }
 
-bool constructPairings(jcEng * eng, jcRegisteredCollHandler * ch)
+bool constructPairings(jcEngInternal * eng, jcRegisteredCollHandler * ch)
 {
     jcObjectList * objectsGroup1 = NULL;
     jcObjectList * objectsGroup2 = NULL;
@@ -115,8 +176,9 @@ bool constructPairings(jcEng * eng, jcRegisteredCollHandler * ch)
     return true;
 }
 
-bool registerCollHandler(jcEng * eng, juint groupNum1, juint groupNum2, collHandler handler)
+bool registerCollHandler(jcEng * enge, juint groupNum1, juint groupNum2, collHandler handler)
 {
+    jcEngInternal * eng = (jcEngInternal *)enge;
     jcRegisteredCollHandler * collHandler = malloc(sizeof(*collHandler));
     if (!collHandler)
         return false;
@@ -130,8 +192,9 @@ bool registerCollHandler(jcEng * eng, juint groupNum1, juint groupNum2, collHand
     return true;
 }
 
-bool constructObjectPairings(jcEng * eng, jcObject * ob)
+bool constructObjectPairings(jcEngInternal * enge, jcObject * ob)
 {
+    jcEngInternal * eng = (jcEngInternal *)enge;
     jcRegisteredCollHandlerList * ln;
     for (ln = eng->registeredCollHandlerList; ln != NULL; ln = ln->next)
     {
@@ -164,8 +227,9 @@ bool constructObjectPairings(jcEng * eng, jcObject * ob)
     return true;
 }
 
-bool registerCircle(jcEng * eng, jcircle * c, jvec * v, juint groupNum, void * owner)
+bool registerCircle(jcEng * enge, jcircle * c, jvec * v, juint groupNum, void * owner)
 {
+    jcEngInternal * eng = (jcEngInternal *)enge;
     jcObject * object = malloc(sizeof(*object));
 
     if (!object)
@@ -186,8 +250,9 @@ bool registerCircle(jcEng * eng, jcircle * c, jvec * v, juint groupNum, void * o
     eng->objectList = jcObjectListAdd(eng->objectList, object);
 }
 
-bool registerRect(jcEng * eng, jrect * r, jvec * v, juint groupNum, void * owner)
+bool registerRect(jcEng * enge, jrect * r, jvec * v, juint groupNum, void * owner)
 {
+    jcEngInternal * eng = (jcEngInternal *)enge;
     jcObject * object = malloc(sizeof(*object));
 
     if (!object)
@@ -314,7 +379,7 @@ void removeCollisionsInvolvingObjects(collision * collisionList, juint numCollis
     }
 }
 
-void processCollisions(jcEng * eng)
+void processCollisions(jcEngInternal * eng)
 {
     jcPairingList * p;
     collision collisionList[MAX_COLLISIONS];
@@ -395,7 +460,7 @@ void processCollisions(jcEng * eng)
     }
 }
 
-void integrate(jcEng * eng)
+void integrate(jcEngInternal * eng)
 {
     jcObjectList * p;
 

@@ -323,8 +323,7 @@ bool test_jcEngRegistrations()
     {
         jcEngRegistrationsTestCase * tc = &tcs[i];
 
-        jcEng eng;
-        initJcEng(&eng);
+        jcEng * eng = createJcEng();
 
         uint32_t j;
         for (j = 0; j < tc->numRegistrations; j++)
@@ -333,20 +332,22 @@ bool test_jcEngRegistrations()
             switch (param->type)
             {
                 case REGISTRATION_TEST_PARAM_TYPE_CIRCLE:
-                    registerCircle(&eng, param->shape.circle, param->v, param->groupNum1, param->ownerHandler.owner);
+                    registerCircle(eng, param->shape.circle, param->v, param->groupNum1, param->ownerHandler.owner);
                     break;
                 case REGISTRATION_TEST_PARAM_TYPE_RECT:
-                    registerRect(&eng, param->shape.rect, param->v, param->groupNum1, param->ownerHandler.owner);
+                    registerRect(eng, param->shape.rect, param->v, param->groupNum1, param->ownerHandler.owner);
                     break;
                 case REGISTRATION_TEST_PARAM_TYPE_COLL_HANDLER:
-                    registerCollHandler(&eng, param->groupNum1, param->groupNum2, param->ownerHandler.handler);
+                    registerCollHandler(eng, param->groupNum1, param->groupNum2, param->ownerHandler.handler);
                     break;
             }
         }
 
+        jcEngInternal * engi = (jcEngInternal *)eng;
+
         jcObjectList * p;
         juint numRegisteredObjects = 0;
-        for (p = eng.objectList; p != NULL; p = p->next)
+        for (p = engi->objectList; p != NULL; p = p->next)
         {
             numRegisteredObjects++;
         }
@@ -363,7 +364,7 @@ bool test_jcEngRegistrations()
             jcObject * expectedObject = &tc->expectedObjects[j];
             jcObjectList * pp = NULL;
             bool found = false;
-            for (p = eng.objectList; p != NULL; p = p->next)
+            for (p = engi->objectList; p != NULL; p = p->next)
             {
                 if (jcObjectsIdentical(p->val, expectedObject))
                 {
@@ -385,7 +386,7 @@ bool test_jcEngRegistrations()
 
         jcRegisteredCollHandlerList * q; 
         juint numRegisteredCollHandlers = 0;
-        for (q = eng.registeredCollHandlerList; q != NULL; q = q->next)
+        for (q = engi->registeredCollHandlerList; q != NULL; q = q->next)
         {
             numRegisteredCollHandlers++;
         }
@@ -401,7 +402,7 @@ bool test_jcEngRegistrations()
             jcRegisteredCollHandler * expectedCollHandler = &tc->expectedCollHandlers[j];
             jcRegisteredCollHandlerList * qq = NULL;
             bool found = false;
-            for (q = eng.registeredCollHandlerList; q != NULL; q = q->next)
+            for (q = engi->registeredCollHandlerList; q != NULL; q = q->next)
             {
                 if (q->val->groupNums[0] == expectedCollHandler->groupNums[0] 
                         && q->val->groupNums[1] == expectedCollHandler->groupNums[1]
@@ -434,7 +435,7 @@ bool test_jcEngRegistrations()
 
         jcPairingList * r; 
         juint numPairings = 0;
-        for (r = eng.pairingList; r != NULL; r = r->next)
+        for (r = engi->pairingList; r != NULL; r = r->next)
         {
             numPairings++;
         }
@@ -450,7 +451,7 @@ bool test_jcEngRegistrations()
             expectedJcPairing * expectedPairing = &tc->expectedPairings[j];
             jcPairingList * rr = NULL;
             bool found = false;
-            for (r = eng.pairingList; r != NULL; r = r->next)
+            for (r = engi->pairingList; r != NULL; r = r->next)
             {
                 if (jcObjectsIdentical(r->val->objects[0], &expectedPairing->objects[0])
                         && jcObjectsIdentical(r->val->objects[1], &expectedPairing->objects[1])
@@ -485,22 +486,22 @@ bool test_jcEngRegistrations()
 
 bool test_jcEngRegistrationsInit()
 {
-    jcEng eng;
-    initJcEng(&eng);
+    jcEng * eng = createJcEng();
+    jcEngInternal * engi = (jcEngInternal *)eng;
 
-    if (eng.objectList != NULL)
+    if (engi->objectList != NULL)
     {
         printf("ERROR! test_jcEngRegistrations: objectList not initialised to NULL\n");
         return false;
     }
 
-    if (eng.pairingList != NULL)
+    if (engi->pairingList != NULL)
     {
         printf("ERROR! test_jcEngRegistrations: pairingList not initialised to NULL\n");
         return false;
     }
 
-    if (eng.registeredCollHandlerList != NULL)
+    if (engi->registeredCollHandlerList != NULL)
     {
         printf("ERROR! test_jcEngRegistrations: registeredCollHandlerList not initialised to NULL\n");
         return false;
@@ -819,7 +820,7 @@ bool test_processCollisions()
             p = jcPairingListAdd(p, fillPairing(&(tcs[i].pairingList[j]), &(tcs[i].pairingObjectIndicies[2*j]), tcs[i].completeObjectList, &context));
         }
 
-        jcEng testEng = {pairingList:p};
+        jcEngInternal testEng = {pairingList:p};
         processCollisions(&testEng);
 
         if (context.numHandlersCalled != tcs[i].numHandlerCallsExpected)
