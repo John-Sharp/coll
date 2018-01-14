@@ -124,6 +124,18 @@ void initBall(ball * b, context * ctx)
     ballGetTexture(b);
 }
 
+void momentumResolver(jvec va, jfloat ima, jvec vb, jfloat imb, jvec n, jfloat restitution)
+{
+    jfloat vSep = (va[0] - vb[0]) * n[0] + (va[1] - vb[1]) * n[1];
+    jfloat deltaV = -(restitution + 1) * vSep;
+    
+    va[0] += ima / (ima + imb) * deltaV * n[0];
+    va[1] += ima / (ima + imb) * deltaV * n[1];
+
+    vb[0] -= imb / (ima + imb) * deltaV * n[0];
+    vb[1] -= imb / (ima + imb) * deltaV * n[1];
+}
+
 void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side)
 {
     ball * ball;
@@ -160,12 +172,7 @@ void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side)
 
     ball->collBody.c[0] += ball->v[0] * t;
 
-    jfloat restitution = 0;
-    jfloat vSep = (ball->v[0] - box->v[0]) * n[0] + (ball->v[1] - box->v[1]) * n[1];
-    jfloat deltaV = -(restitution + 1) * vSep;
-    
-    ball->v[0] += deltaV * n[0];
-    ball->v[1] += deltaV * n[1];
+    momentumResolver(ball->v, ball->im, box->v, 1, n, 0.1);
 }
 
 /**
