@@ -21,6 +21,7 @@ typedef struct ball
     context * ctx;
     jvec v;
     jcircle collBody;
+    jfloat im; 
 
     SDL_Rect dest;
     SDL_Texture *tex;
@@ -106,7 +107,10 @@ void ballUpdateDest(ball*b)
 void initBall(ball * b, context * ctx)
 {
     b->ctx = ctx;
-    b->v[0] = -0.5;
+
+    b->im = 1;
+
+    b->v[0] = -0.05;
     b->v[1] = 0;
 
     b->collBody.c[0] = 300;
@@ -123,18 +127,45 @@ void initBall(ball * b, context * ctx)
 void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side)
 {
     ball * ball;
+    box * box;
     if (objects[0]->groupNum == 2)
     {
         ball = objects[0]->owner;
+        box = objects[1]->owner;
     }
     else
     {
         ball = objects[1]->owner;
+        box = objects[0]->owner;
+    }
+
+    jvec n = {0, 0};
+    switch (side)
+    {
+        case JC_SIDE_L:
+            n[0] = -1;
+            break;
+        case JC_SIDE_R:
+            n[0] = 1;
+            break;
+        case JC_SIDE_T:
+            n[1] = 1;
+            break;
+        case JC_SIDE_B:
+            n[1] = -1;
+            break;
+        default:
+            break;
     }
 
     ball->collBody.c[0] += ball->v[0] * t;
-    ball->v[0] = 0;
-    ball->v[1] = 0;
+
+    jfloat restitution = 0;
+    jfloat vSep = (ball->v[0] - box->v[0]) * n[0] + (ball->v[1] - box->v[1]) * n[1];
+    jfloat deltaV = -(restitution + 1) * vSep;
+    
+    ball->v[0] += deltaV * n[0];
+    ball->v[1] += deltaV * n[1];
 }
 
 /**

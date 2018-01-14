@@ -424,7 +424,7 @@ void processCollisions(jcEngInternal * eng)
 
         v[0] = (*collisionList[0].pairing->objects[1]->v)[0] * -tColl;
         v[1] = (*collisionList[0].pairing->objects[1]->v)[1] * -tColl;
-        jcObjectTranslate(collisionList[0].pairing->objects[0], v);
+        jcObjectTranslate(collisionList[0].pairing->objects[1], v);
 
         // remove collisions involving objects in collision that has just been resolved
         juint numCollisionsRemoved = 0;
