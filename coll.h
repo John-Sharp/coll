@@ -59,7 +59,7 @@ typedef void (*collHandler)(jcObject ** objects, jfloat t, JC_SIDE side);
 
 typedef struct jcEng {} jcEng;
 jcEng * createJcEng();
-void jcEngDoStep();
+void jcEngDoStep(jcEng * eng);
 
 bool registerCollHandler(jcEng * eng, juint groupNum1, juint groupNum2, collHandler handler);
 bool registerCircle(jcEng * eng, jcircle * c, jvec * v, juint groupNum, void * owner);

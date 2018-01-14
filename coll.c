@@ -419,11 +419,11 @@ void processCollisions(jcEngInternal * eng)
         collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t, collisionList[0].side);
 
         // retard pairing->objects v t
-        jvec v = {*(collisionList[0].pairing->objects[0]->v)[0] * -tColl, *(collisionList[0].pairing->objects[0]->v)[1] * -tColl};
+        jvec v = {(*collisionList[0].pairing->objects[0]->v)[0] * -tColl, (*collisionList[0].pairing->objects[0]->v)[1] * -tColl};
         jcObjectTranslate(collisionList[0].pairing->objects[0], v);
 
-        v[0] = *(collisionList[0].pairing->objects[1]->v)[0] * -tColl;
-        v[1] = *(collisionList[0].pairing->objects[1]->v)[1] * -tColl;
+        v[0] = (*collisionList[0].pairing->objects[1]->v)[0] * -tColl;
+        v[1] = (*collisionList[0].pairing->objects[1]->v)[1] * -tColl;
         jcObjectTranslate(collisionList[0].pairing->objects[0], v);
 
         // remove collisions involving objects in collision that has just been resolved
@@ -471,6 +471,14 @@ void integrate(jcEngInternal * eng)
     {
         jcObjectTranslate(p->val, *p->val->v);
     }
+}
+
+void jcEngDoStep(jcEng * eng)
+{
+    jcEngInternal * engi = (jcEngInternal *)eng;
+
+    processCollisions(engi);
+    integrate(engi);
 }
 
 bool solveQuadratic(jfloat a, jfloat b, jfloat c, jfloat *x)
