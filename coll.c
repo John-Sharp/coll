@@ -68,6 +68,7 @@ jcEngInternal * initJcEng(jcEngInternal * eng)
     eng->objectList = NULL;
     eng->pairingList = NULL;
     eng->registeredCollHandlerList = NULL;
+    return eng;
 }
 
 jcEng * createJcEng()
@@ -248,6 +249,7 @@ bool registerCircle(jcEng * enge, jcircle * c, jvec * v, juint groupNum, void * 
     }
     
     eng->objectList = jcObjectListAdd(eng->objectList, object);
+    return true;
 }
 
 bool registerRect(jcEng * enge, jrect * r, jvec * v, juint groupNum, void * owner)
@@ -271,6 +273,7 @@ bool registerRect(jcEng * enge, jrect * r, jvec * v, juint groupNum, void * owne
     }
     
     eng->objectList = jcObjectListAdd(eng->objectList, object);
+    return true;
 }
 
 typedef struct collision
@@ -552,7 +555,7 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
     {
         jfloat temp = t[0];
         t[0] = t[1];
-        t[0] = t[1];
+        t[1] = temp;
     }
 
     // if the collision happened at a time either before or after this
