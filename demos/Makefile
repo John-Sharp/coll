@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -pg -g -Wall -lm -lSDL2 -lSDL2_image
+CFLAGS = -Wall -lm -lSDL2 -lSDL2_image
 
 all: ballInBox.c ../coll.h ../coll.c 
 	$(CC) ballInBox.c ../coll.c $(CFLAGS) -o ballInBox
