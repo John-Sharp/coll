@@ -4,7 +4,32 @@
 #include <SDL2/SDL_image.h>
 #include "../coll.h"
 
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+
 typedef struct context context;
+
+enum 
+{
+    BOX_W = 20,
+    BOX_H = 20,
+    CAGE_W = 10,
+    CAGE_H = 10,
+    CAGE_BL_X = 80,
+    CAGE_BL_Y = 20,
+    TOTAL_BOXES = 2 * CAGE_W + 2 * (CAGE_H - 1),
+    BALL_R = 10,
+};
+
+typedef struct ballInitParams
+{
+    jvec v;
+    jvec c;
+} ballInitParams;
+
+ballInitParams INIT_PARAMS[] = {
+    {v: {0.030, -0.02}, c: {150, 150}},
+//    {v: {0.030, -0.02}, c: {180, 150}}
+};
 
 typedef struct box
 {
@@ -13,7 +38,6 @@ typedef struct box
     jrect collBody;
 
     SDL_Rect dest;
-    SDL_Texture *tex;
 } box;
 
 typedef struct ball
@@ -34,13 +58,15 @@ struct context
 {
     SDL_Renderer *renderer;
 
-    ball ball;
-    box box;
+    ball balls[ARRAY_SIZE(INIT_PARAMS)];
+    box boxes[TOTAL_BOXES];
 
+    SDL_Texture *boxTexture;
+    SDL_Texture *ballTexture;
     jcEng * collEng;
 };
 
-int boxGetTexture(box * b)
+int getTextures(context * ctx)
 {
   SDL_Surface *image = IMG_Load("assets/box.png");
   if (!image)
@@ -48,27 +74,55 @@ int boxGetTexture(box * b)
      printf("IMG_Load: %s\n", IMG_GetError());
      return 0;
   }
-  b->tex = SDL_CreateTextureFromSurface(b->ctx->renderer, image);
+  ctx->boxTexture = SDL_CreateTextureFromSurface(ctx->renderer, image);
+
+  SDL_FreeSurface (image);
+
+  image = IMG_Load("assets/ball.png");
+  if (!image)
+  {
+     printf("IMG_Load: %s\n", IMG_GetError());
+     return 0;
+  }
+  ctx->ballTexture = SDL_CreateTextureFromSurface(ctx->renderer, image);
 
   SDL_FreeSurface (image);
 
   return 1;
 }
 
-void initBox(box * b, context * ctx)
+void initBox(box * b, jfloat x, jfloat y, context * ctx)
 {
     b->ctx = ctx;
     b->v[0] = 0;
     b->v[1] = 0;
 
-    b->collBody.bl[0] = 80;
-    b->collBody.bl[1] = 190;
+    b->collBody.bl[0] = x;
+    b->collBody.bl[1] = y;
     b->collBody.tr[0] = b->collBody.bl[0] + 20;
     b->collBody.tr[1] = b->collBody.bl[1] + 20;
 
     registerRect(ctx->collEng, &b->collBody, &b->v, 1, b);
+}
 
-    boxGetTexture(b);
+void createBoxes(context * ctx)
+{
+    juint i = 0;
+    for (i = 0; i < CAGE_W; i++)
+    {
+        initBox(&ctx->boxes[i], i * BOX_W + CAGE_BL_X, CAGE_BL_Y, ctx);
+    }
+
+    for (i = 0; i < CAGE_H - 2; i++)
+    {
+        initBox(&ctx->boxes[CAGE_W + i], CAGE_BL_X, (i + 1)  * BOX_H + CAGE_BL_Y, ctx);
+        initBox(&ctx->boxes[CAGE_W + CAGE_H - 2 + i], (CAGE_W - 1) * BOX_W + CAGE_BL_X, (i + 1) * BOX_H + CAGE_BL_Y, ctx);
+    }
+
+    for (i = 0; i < CAGE_W; i++)
+    {
+        initBox(&ctx->boxes[CAGE_W + 2*(CAGE_H - 2) + i], i * BOX_W + CAGE_BL_X, (CAGE_H - 1) * BOX_H + CAGE_BL_Y, ctx);
+    }
 }
 
 void boxUpdateDest(box * b)
@@ -104,24 +158,33 @@ void ballUpdateDest(ball*b)
     b->dest.y = -1 * (b->collBody.c[1] - b->collBody.r) + (400 - b->dest.h);
 }
 
-void initBall(ball * b, context * ctx)
+void initBall(ball * b, const ballInitParams * params, context * ctx)
 {
     b->ctx = ctx;
 
     b->im = 1;
 
-    b->v[0] = -0.05;
-    b->v[1] = 0;
+    b->v[0] = params->v[0];
+    b->v[1] = params->v[1];
 
-    b->collBody.c[0] = 300;
-    b->collBody.c[1] = 200;
-    b->collBody.r = 10;
+    b->collBody.c[0] = params->c[0];
+    b->collBody.c[1] = params->c[1];
+    b->collBody.r = BALL_R;
 
     ballUpdateDest(b);
 
     registerCircle(ctx->collEng, &b->collBody, &b->v, 2, b);
 
     ballGetTexture(b);
+}
+
+void createBalls(context * ctx)
+{
+    juint i;
+    for (i = 0; i < ARRAY_SIZE(INIT_PARAMS); i++)
+    {
+        initBall(&ctx->balls[i], &INIT_PARAMS[i], ctx);
+    }
 }
 
 void momentumResolver(jvec va, jfloat ima, jvec vb, jfloat imb, jvec n, jfloat restitution)
@@ -152,27 +215,28 @@ void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side)
     }
 
     jvec n = {0, 0};
-    switch (side)
+
+    if (side & JC_SIDE_L)
     {
-        case JC_SIDE_L:
-            n[0] = -1;
-            break;
-        case JC_SIDE_R:
-            n[0] = 1;
-            break;
-        case JC_SIDE_T:
-            n[1] = 1;
-            break;
-        case JC_SIDE_B:
-            n[1] = -1;
-            break;
-        default:
-            break;
+        n[0] = -1;
+    }
+    if (side & JC_SIDE_R)
+    {
+        n[0] = 1;
+    }
+    if (side & JC_SIDE_B)
+    {
+        n[1] = -1;
+    }
+    if (side & JC_SIDE_T)
+    {
+        n[1] = 1;
     }
 
-    ball->collBody.c[0] += ball->v[0] * t;
+    ball->collBody.c[0] += ball->v[0] * (t);
+    ball->collBody.c[1] += ball->v[1] * (t);
 
-    momentumResolver(ball->v, ball->im, box->v, 1, n, 0.1);
+    momentumResolver(ball->v, ball->im, box->v, 0, n, 0);
 }
 
 /**
@@ -185,12 +249,20 @@ void loop_handler(void *arg)
     context *ctx = arg;
 
     jcEngDoStep(ctx->collEng);
-    ballUpdateDest(&ctx->ball);
-    boxUpdateDest(&ctx->box);
 
     SDL_RenderClear(ctx->renderer);
-    SDL_RenderCopy(ctx->renderer, ctx->ball.tex, NULL, &ctx->ball.dest);
-    SDL_RenderCopy(ctx->renderer, ctx->box.tex, NULL, &ctx->box.dest);
+    juint i;
+
+    for (i = 0; i < ARRAY_SIZE(INIT_PARAMS); i++)
+    {
+        ballUpdateDest(&ctx->balls[i]);
+        SDL_RenderCopy(ctx->renderer, ctx->ballTexture, NULL, &ctx->balls[i].dest);
+    }
+    for (i = 0; i < TOTAL_BOXES; i++)
+    {
+        boxUpdateDest(&ctx->boxes[i]);
+        SDL_RenderCopy(ctx->renderer, ctx->boxTexture, NULL, &ctx->boxes[i].dest);
+    }
     SDL_RenderPresent(ctx->renderer);
 }
 
@@ -204,8 +276,10 @@ int main()
     SDL_SetRenderDrawColor(ctx.renderer, 255, 255, 255, 255);
 
     ctx.collEng = createJcEng();
-    initBall(&ctx.ball, &ctx);
-    initBox(&ctx.box, &ctx);
+    getTextures(&ctx);
+    createBalls(&ctx);
+    createBoxes(&ctx);
+
     registerCollHandler(ctx.collEng, 1, 2, boxBallCollHandler);
 
     /**

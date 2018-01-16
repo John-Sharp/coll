@@ -610,8 +610,6 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
         num_solns += 2;
     }
 
-    bool ret = getDesiredSolutionIfExtant(t, num_solns, tc);
-
     return getDesiredSolutionIfExtant(t, num_solns, tc);
 }
 
