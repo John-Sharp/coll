@@ -481,9 +481,11 @@ void jcEngDoStep(jcEng * eng)
     integrate(engi);
 }
 
-bool solveQuadratic(jfloat a, jfloat b, jfloat c, jfloat *x)
+// use doubles here as you need more precision than floats
+// for when an object is 'grazing' another
+bool solveQuadratic(jdouble a, jdouble b, jdouble c, jfloat *x)
 {
-    jfloat d = b * b - 4 * a * c;
+    jdouble d = b * b - 4 * a * c;
     if (d < 0)
     {
         return false;
@@ -607,6 +609,8 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
     {
         num_solns += 2;
     }
+
+    bool ret = getDesiredSolutionIfExtant(t, num_solns, tc);
 
     return getDesiredSolutionIfExtant(t, num_solns, tc);
 }

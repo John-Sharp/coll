@@ -7,6 +7,7 @@
 typedef uint32_t juint;
 typedef int32_t jint;
 typedef float jfloat;
+typedef double jdouble;
 
 typedef jfloat jvec[2];
 
