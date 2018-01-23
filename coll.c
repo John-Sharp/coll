@@ -280,7 +280,8 @@ typedef struct collision
 {
     jcPairing * pairing;
     jfloat t;
-    JC_SIDE side;
+    JC_SIDE side; // TODO replace this with jvec n
+    jvec deltav[2];
 } collision;
 
 enum { MAX_COLLISIONS = 40 };
@@ -293,6 +294,8 @@ void initCollisionList(collision * cl)
         cl[i].pairing = NULL;
         cl[i].t = 2;
         cl[i].side = JC_SIDE_NONE;
+
+        cl[i].deltav[0][0] = 0; cl[i].deltav[0][1] = 0; cl[i].deltav[1][0] = 0; cl[i].deltav[1][1] = 0;
     }
 }
 
@@ -429,20 +432,64 @@ void processCollisions(jcEngInternal * eng)
         jfloat tColl = collisionList[0].t;
         jfloat tRem = 1 - collisionList[0].t; 
 
-        // resolve earliest collision
-        collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t, collisionList[0].side);
+        jcObject * collObjects[2*MAX_COLLISIONS]; 
+        juint i;
+        juint numUniqueColliders = 0;
+        for (i = 0; i < MAX_COLLISIONS; i++)
+        {
+            if (collisionList[i].t != tColl)
+            {
+                break;
+            }
 
-        // retard pairing->objects v t
-        jvec v = {(*collisionList[0].pairing->objects[0]->v)[0] * -tColl, (*collisionList[0].pairing->objects[0]->v)[1] * -tColl};
-        jcObjectTranslate(collisionList[0].pairing->objects[0], v);
+            collisionList[i].pairing->handler(collisionList[i].pairing->objects, collisionList[i].t, collisionList[i].side, collisionList[i].deltav);
 
-        v[0] = (*collisionList[0].pairing->objects[1]->v)[0] * -tColl;
-        v[1] = (*collisionList[0].pairing->objects[1]->v)[1] * -tColl;
-        jcObjectTranslate(collisionList[0].pairing->objects[1], v);
+            juint j;
+            bool found[2] = {false, false};
+            for (j = 0; j < numUniqueColliders; j++)
+            {
+                if (collisionList[i].pairing->objects[0] == collObjects[j])
+                {
+                    found[0] = true;
+                }
+                if (collisionList[i].pairing->objects[1] == collObjects[j])
+                {
+                    found[1] = true;
+                }
+            }
 
-        // remove collisions involving objects in collision that has just been resolved
+            if (!found[0])
+            {
+                collObjects[numUniqueColliders++] = collisionList[i].pairing->objects[0];
+            }
+
+            if (!found[1])
+            {
+                collObjects[numUniqueColliders++] = collisionList[i].pairing->objects[1];
+            }
+        }
+
+        for (i = 0; i < MAX_COLLISIONS; i++)
+        {
+            if (collisionList[i].t != tColl)
+            {
+                break;
+            }
+            (*collisionList[i].pairing->objects[0]->v)[0] += collisionList[i].deltav[0][0];
+            (*collisionList[i].pairing->objects[0]->v)[1] += collisionList[i].deltav[0][1];
+
+            (*collisionList[i].pairing->objects[1]->v)[0] += collisionList[i].deltav[1][0];
+            (*collisionList[i].pairing->objects[1]->v)[1] += collisionList[i].deltav[1][1];
+        }
+
+        for (i = 0; i < numUniqueColliders; i++)
+        {
+            // retard collision objects v t
+            jvec r = {(*collObjects[i]->v)[0] * -tColl, (*collObjects[i]->v)[1] * -tColl};
+            jcObjectTranslate(collObjects[i], r);
+        }
         juint numCollisionsRemoved = 0;
-        removeCollisionsInvolvingObjects(collisionList, num_collisions, collisionList[0].pairing->objects, 2, &numCollisionsRemoved);
+        removeCollisionsInvolvingObjects(collisionList, num_collisions, collObjects, numUniqueColliders, &numCollisionsRemoved);
         num_collisions -= numCollisionsRemoved;
 
         qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);

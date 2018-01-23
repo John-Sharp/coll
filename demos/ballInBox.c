@@ -211,7 +211,7 @@ void momentumResolver(jvec va, jfloat ima, jvec vb, jfloat imb, jvec n, jfloat r
     vb[1] -= imb / (ima + imb) * deltaV * n[1];
 }
 
-void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side)
+void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)
 {
     ball * ball;
     box * box;

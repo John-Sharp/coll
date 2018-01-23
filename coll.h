@@ -56,7 +56,7 @@ typedef struct jcObject
 
 void jcObjectTranslate(jcObject *object, jvec v);
 
-typedef void (*collHandler)(jcObject ** objects, jfloat t, JC_SIDE side);
+typedef void (*collHandler)(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav);
 
 typedef struct jcEng {} jcEng;
 jcEng * createJcEng();
