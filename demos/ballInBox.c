@@ -5,6 +5,7 @@
 #include "../coll.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+#define ISQRT2 0.7071067811865475
 
 typedef struct context context;
 
@@ -27,15 +28,24 @@ typedef struct ballInitParams
 } ballInitParams;
 
 ballInitParams INIT_PARAMS[] = {
-    {v: {0.030, -0.02}, c: {150, 150}},
-//    {v: {0.030, -0.02}, c: {180, 150}}
+//    {v: {0.031, -0.021}, c: {150, 150}},
+    {v: {-0.31, -0.021}, c: {180.017555, 160.065186}},
+    {v: {0.031, -0.3}, c: {180, 150}}
 };
 
+
+typedef enum BOX_TYPE
+{
+    BOX_TYPE_H,
+    BOX_TYPE_V
+} BOX_TYPE;
 typedef struct box
 {
     context * ctx;
     jvec v;
     jrect collBody;
+
+    BOX_TYPE boxType;
 
     SDL_Rect dest;
 } box;
@@ -91,11 +101,13 @@ int getTextures(context * ctx)
   return 1;
 }
 
-void initBox(box * b, jfloat x, jfloat y, context * ctx)
+void initBox(box * b, jfloat x, jfloat y, BOX_TYPE type, context * ctx)
 {
     b->ctx = ctx;
     b->v[0] = 0;
     b->v[1] = 0;
+
+    b->boxType = type;
 
     b->collBody.bl[0] = x;
     b->collBody.bl[1] = y;
@@ -110,18 +122,18 @@ void createBoxes(context * ctx)
     juint i = 0;
     for (i = 0; i < CAGE_W; i++)
     {
-        initBox(&ctx->boxes[i], i * BOX_W + CAGE_BL_X, CAGE_BL_Y, ctx);
+        initBox(&ctx->boxes[i], i * BOX_W + CAGE_BL_X, CAGE_BL_Y, BOX_TYPE_H, ctx);
     }
 
     for (i = 0; i < CAGE_H - 2; i++)
     {
-        initBox(&ctx->boxes[CAGE_W + i], CAGE_BL_X, (i + 1)  * BOX_H + CAGE_BL_Y, ctx);
-        initBox(&ctx->boxes[CAGE_W + CAGE_H - 2 + i], (CAGE_W - 1) * BOX_W + CAGE_BL_X, (i + 1) * BOX_H + CAGE_BL_Y, ctx);
+        initBox(&ctx->boxes[CAGE_W + i], CAGE_BL_X, (i + 1)  * BOX_H + CAGE_BL_Y, BOX_TYPE_V, ctx);
+        initBox(&ctx->boxes[CAGE_W + CAGE_H - 2 + i], (CAGE_W - 1) * BOX_W + CAGE_BL_X, (i + 1) * BOX_H + CAGE_BL_Y, BOX_TYPE_V, ctx);
     }
 
     for (i = 0; i < CAGE_W; i++)
     {
-        initBox(&ctx->boxes[CAGE_W + 2*(CAGE_H - 2) + i], i * BOX_W + CAGE_BL_X, (CAGE_H - 1) * BOX_H + CAGE_BL_Y, ctx);
+        initBox(&ctx->boxes[CAGE_W + 2*(CAGE_H - 2) + i], i * BOX_W + CAGE_BL_X, (CAGE_H - 1) * BOX_H + CAGE_BL_Y, BOX_TYPE_H, ctx);
     }
 }
 
@@ -218,25 +230,50 @@ void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side)
 
     if (side & JC_SIDE_L)
     {
-        n[0] = -1;
+        n[0] += -1;
     }
     if (side & JC_SIDE_R)
     {
-        n[0] = 1;
+        n[0] += 1;
     }
     if (side & JC_SIDE_B)
     {
-        n[1] = -1;
+        n[1] += -1;
     }
     if (side & JC_SIDE_T)
     {
-        n[1] = 1;
+        n[1] += 1;
+    }
+
+    if (n[0] != 0 && n[1] != 0)
+    {
+        n[0] *= ISQRT2;
+        n[1] *= ISQRT2;
     }
 
     ball->collBody.c[0] += ball->v[0] * (t);
     ball->collBody.c[1] += ball->v[1] * (t);
 
-    momentumResolver(ball->v, ball->im, box->v, 0, n, 0);
+    switch (box->boxType)
+    {
+        case BOX_TYPE_V:
+            if (n[0]==0)
+            { 
+                return;
+            }
+            n[1] = 0;
+            break;
+        case BOX_TYPE_H:
+            if (n[1]==0)
+            {
+                return;
+            }
+            n[0] = 0;
+            break;
+    }
+
+
+    momentumResolver(ball->v, ball->im, box->v, 0, n, 1);
 }
 
 /**

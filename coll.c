@@ -298,6 +298,17 @@ void initCollisionList(collision * cl)
 
 int clCompar(const void * a, const void * b)
 {
+    // TODO this isn't right
+    // the correct procedure is to change collision handlers
+    // to only change the velocity of the colliders.
+    // Then simultaneous collisions are dealt with 
+    // by just adding these 'delta v's
+    if (((collision *)a)->t == ((collision *)b)->t && ((collision *)a)->t != 2)
+    {
+        ((collision *)a)->side |= ((collision *)b)->side;
+        ((collision *)b)->side = ((collision *)a)->side;
+    }
+
     if (((collision *)a)->t > ((collision *)b)->t)
         return 1;
     return -1;
@@ -389,12 +400,13 @@ void processCollisions(jcEngInternal * eng)
     initCollisionList(collisionList);
     juint num_collisions = 0;
 
+    JC_SIDE side;
+
     for (p = eng->pairingList; p != NULL; p = p->next)
     {
         jcPairing * pairing = p->val;
 
         jfloat t;
-        JC_SIDE side;
         if (checkCollision(pairing, 1.0, &t, &side))
         {
             collisionList[num_collisions].pairing = pairing;
@@ -411,6 +423,8 @@ void processCollisions(jcEngInternal * eng)
 
     while (num_collisions > 0)
     {
+        // TODO if multiple collisions happen at exactly the same time,
+        // add 'delta v's
         qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
         jfloat tColl = collisionList[0].t;
         jfloat tRem = 1 - collisionList[0].t; 
@@ -445,7 +459,7 @@ void processCollisions(jcEngInternal * eng)
                     || pairing->objects[1] == collisionList[0].pairing->objects[0]
                     || pairing->objects[1] == collisionList[0].pairing->objects[1])
             {
-                JC_SIDE side;
+                // JC_SIDE side;
                 if (checkCollision(pairing, tRem, &t, &side))
                 {
                     collisionList[num_collisions].pairing = pairing;
