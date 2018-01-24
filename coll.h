@@ -11,6 +11,8 @@ typedef double jdouble;
 
 typedef jfloat jvec[2];
 
+jfloat * jvecAdd(jvec a, jvec b);
+
 typedef struct jcircle
 {
     jvec c; // centre
