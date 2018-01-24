@@ -199,31 +199,37 @@ void createBalls(context * ctx)
     }
 }
 
-void momentumResolver(jvec va, jfloat ima, jvec vb, jfloat imb, jvec n, jfloat restitution)
+void momentumResolver(jvec va, jfloat ima, jvec vb, jfloat imb, jvec n, jfloat restitution, jvec deltava, jvec deltavb)
 {
     jfloat vSep = (va[0] - vb[0]) * n[0] + (va[1] - vb[1]) * n[1];
     jfloat deltaV = -(restitution + 1) * vSep;
     
-    va[0] += ima / (ima + imb) * deltaV * n[0];
-    va[1] += ima / (ima + imb) * deltaV * n[1];
+    deltava[0] = ima / (ima + imb) * deltaV * n[0];
+    deltava[1] = ima / (ima + imb) * deltaV * n[1];
 
-    vb[0] -= imb / (ima + imb) * deltaV * n[0];
-    vb[1] -= imb / (ima + imb) * deltaV * n[1];
+    deltavb[0] = -imb / (ima + imb) * deltaV * n[0];
+    deltavb[1] = -imb / (ima + imb) * deltaV * n[1];
 }
 
 void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)
 {
     ball * ball;
+    jvec * deltavBall;
     box * box;
+    jvec * deltavBox;
     if (objects[0]->groupNum == 2)
     {
         ball = objects[0]->owner;
+        deltavBall = &deltav[0];
         box = objects[1]->owner;
+        deltavBox = &deltav[1];
     }
     else
     {
         ball = objects[1]->owner;
+        deltavBall = &deltav[1];
         box = objects[0]->owner;
+        deltavBox = &deltav[0];
     }
 
     jvec n = {0, 0};
@@ -251,29 +257,7 @@ void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * delt
         n[1] *= ISQRT2;
     }
 
-    ball->collBody.c[0] += ball->v[0] * (t);
-    ball->collBody.c[1] += ball->v[1] * (t);
-
-    switch (box->boxType)
-    {
-        case BOX_TYPE_V:
-            if (n[0]==0)
-            { 
-                return;
-            }
-            n[1] = 0;
-            break;
-        case BOX_TYPE_H:
-            if (n[1]==0)
-            {
-                return;
-            }
-            n[0] = 0;
-            break;
-    }
-
-
-    momentumResolver(ball->v, ball->im, box->v, 0, n, 1);
+    momentumResolver(ball->v, ball->im, box->v, 0, n, 1, *deltavBall, *deltavBox);
 }
 
 /**

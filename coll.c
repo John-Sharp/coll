@@ -426,8 +426,6 @@ void processCollisions(jcEngInternal * eng)
 
     while (num_collisions > 0)
     {
-        // TODO if multiple collisions happen at exactly the same time,
-        // add 'delta v's
         qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
         jfloat tColl = collisionList[0].t;
         jfloat tRem = 1 - collisionList[0].t; 
@@ -467,6 +465,12 @@ void processCollisions(jcEngInternal * eng)
             {
                 collObjects[numUniqueColliders++] = collisionList[i].pairing->objects[1];
             }
+        }
+
+        for (i = 0; i < numUniqueColliders; i++)
+        {
+            jvec r = {(*collObjects[i]->v)[0] * tColl, (*collObjects[i]->v)[1] * tColl};
+            jcObjectTranslate(collObjects[i], r);
         }
 
         for (i = 0; i < MAX_COLLISIONS; i++)
