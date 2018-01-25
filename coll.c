@@ -464,6 +464,7 @@ void processCollisions(jcEngInternal * eng)
                 {
                     found[1] = true;
                     jvecAdd(simultaneousCollObjects[j].deltav, deltavs[1]);
+
                 }
             }
 
@@ -471,17 +472,24 @@ void processCollisions(jcEngInternal * eng)
             {
                 simultaneousCollObjects[numUniqueColliders].object = collisionList[i].pairing->objects[0];
                 jvecAdd(simultaneousCollObjects[numUniqueColliders++].deltav, deltavs[0]);
+
+                printf("blah %f, %f\n", (*simultaneousCollObjects[numUniqueColliders-1].object->v)[0], (*simultaneousCollObjects[numUniqueColliders-1].object->v)[1]);
+                printf("dblah %f, %f\n", simultaneousCollObjects[numUniqueColliders-1].deltav[0], simultaneousCollObjects[numUniqueColliders-1].deltav[1]);
             }
 
             if (!found[1])
             {
                 simultaneousCollObjects[numUniqueColliders].object = collisionList[i].pairing->objects[1];
                 jvecAdd(simultaneousCollObjects[numUniqueColliders++].deltav, deltavs[1]);
+
+                printf("iblah %f, %f\n", (*simultaneousCollObjects[numUniqueColliders-1].object->v)[0], (*simultaneousCollObjects[numUniqueColliders-1].object->v)[1]);
+                printf("idblah %f, %f\n", simultaneousCollObjects[numUniqueColliders-1].deltav[0], simultaneousCollObjects[numUniqueColliders-1].deltav[1]);
             }
         }
 
         for (i = 0; i < numUniqueColliders; i++)
         {
+            printf("uc %f, %f %f\n", (*simultaneousCollObjects[i].object->v)[0], (*simultaneousCollObjects[i].object->v)[1], tColl);
             // translate object to collision point
             jvec r = {(*simultaneousCollObjects[i].object->v)[0] * tColl, (*simultaneousCollObjects[i].object->v)[1] * tColl};
             jcObjectTranslate(simultaneousCollObjects[i].object, r);
@@ -493,6 +501,7 @@ void processCollisions(jcEngInternal * eng)
             r[0] = (*simultaneousCollObjects[i].object->v)[0] * -tColl;
             r[1] = (*simultaneousCollObjects[i].object->v)[1] * -tColl;
             jcObjectTranslate(simultaneousCollObjects[i].object, r);
+            printf("uc (post) %f, %f\n", (*simultaneousCollObjects[i].object->v)[0], (*simultaneousCollObjects[i].object->v)[1]);
         }
 
         juint numCollisionsRemoved = 0;
@@ -516,6 +525,7 @@ void processCollisions(jcEngInternal * eng)
                 // JC_SIDE side;
                 if (checkCollision(pairing, tRem, &t, &side))
                 {
+                    printf("hwllo %f\n", t);
                     collisionList[num_collisions].pairing = pairing;
                     collisionList[num_collisions].t = t;
                     collisionList[num_collisions].side = side;
@@ -576,6 +586,22 @@ jfloat * jvecAdd(jvec a, jvec b)
     a[0] += b[0];
     a[1] += b[1];
 
+    return a;
+}
+
+jfloat * jvecSub(jvec a, jvec b)
+{
+    a[0] -= b[0];
+    a[1] -= b[1];
+
+    return a;
+}
+
+jfloat * jvecNorm(jvec a)
+{
+    jfloat mag = sqrtf(a[0]*a[0] + a[1]*a[1]);
+    a[0] /= mag;
+    a[1] /= mag;
     return a;
 }
 

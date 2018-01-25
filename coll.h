@@ -12,6 +12,8 @@ typedef double jdouble;
 typedef jfloat jvec[2];
 
 jfloat * jvecAdd(jvec a, jvec b);
+jfloat * jvecSub(jvec a, jvec b);
+jfloat * jvecNorm(jvec a);
 
 typedef struct jcircle
 {
