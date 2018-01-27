@@ -32,7 +32,7 @@ ballInitParams INIT_PARAMS[] = {
 //    {v: {-0.31, -0.021}, c: {180.017555, 160.065186}},
 //    {v: {0.031, -0.3}, c: {180, 150}}
 
-    {v: {0.0, -0.02}, c: {180.0, 180.065186}},
+    {v: {0.1, -0.02}, c: {180.0, 180.065186}},
     {v: {0.0, 0.02}, c: {180, 90}}
 };
 
@@ -221,12 +221,8 @@ void ballBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * del
 
     jvec n = {ballA->collBody.c[0], ballA->collBody.c[1]};
     jvecNorm(jvecSub(n, ballB->collBody.c));
-    printf("ra: %f, %f rb: %f, %f\n", ballA->collBody.c[0], ballA->collBody.c[1], ballB->collBody.c[0], ballB->collBody.c[1]);
-    printf("here n: %f, %f \n", n[0], n[1]);
 
     momentumResolver(ballA->v, ballA->im, ballB->v, ballB->im, n, 1, deltav[0], deltav[1]);
-
-    printf("deltav1: %f, %f deltav2: %f, %f\n\n", deltav[0][0], deltav[0][1], deltav[1][0], deltav[1][1]);
 }
 
 void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)

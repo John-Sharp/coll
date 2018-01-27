@@ -79,6 +79,18 @@ jcEng * createJcEng()
     return (jcEng *)eng;
 }
 
+jfloat * jObjectGetPosn(jcObject *object)
+{
+    if (object->shapeType == SHAPE_TYPE_CIRCLE)
+    {
+        return object->shape.circle->c;
+    }
+    else
+    {
+        return object->shape.rect->bl;
+    }
+}
+
 void jcObjectTranslate(jcObject *object, jvec v)
 {
     if (object->shapeType == SHAPE_TYPE_CIRCLE)
@@ -301,17 +313,6 @@ void initCollisionList(collision * cl)
 
 int clCompar(const void * a, const void * b)
 {
-    // TODO this isn't right
-    // the correct procedure is to change collision handlers
-    // to only change the velocity of the colliders.
-    // Then simultaneous collisions are dealt with 
-    // by just adding these 'delta v's
-    if (((collision *)a)->t == ((collision *)b)->t && ((collision *)a)->t != 2)
-    {
-        ((collision *)a)->side |= ((collision *)b)->side;
-        ((collision *)b)->side = ((collision *)a)->side;
-    }
-
     if (((collision *)a)->t > ((collision *)b)->t)
         return 1;
     return -1;
@@ -472,24 +473,17 @@ void processCollisions(jcEngInternal * eng)
             {
                 simultaneousCollObjects[numUniqueColliders].object = collisionList[i].pairing->objects[0];
                 jvecAdd(simultaneousCollObjects[numUniqueColliders++].deltav, deltavs[0]);
-
-                printf("blah %f, %f\n", (*simultaneousCollObjects[numUniqueColliders-1].object->v)[0], (*simultaneousCollObjects[numUniqueColliders-1].object->v)[1]);
-                printf("dblah %f, %f\n", simultaneousCollObjects[numUniqueColliders-1].deltav[0], simultaneousCollObjects[numUniqueColliders-1].deltav[1]);
             }
 
             if (!found[1])
             {
                 simultaneousCollObjects[numUniqueColliders].object = collisionList[i].pairing->objects[1];
                 jvecAdd(simultaneousCollObjects[numUniqueColliders++].deltav, deltavs[1]);
-
-                printf("iblah %f, %f\n", (*simultaneousCollObjects[numUniqueColliders-1].object->v)[0], (*simultaneousCollObjects[numUniqueColliders-1].object->v)[1]);
-                printf("idblah %f, %f\n", simultaneousCollObjects[numUniqueColliders-1].deltav[0], simultaneousCollObjects[numUniqueColliders-1].deltav[1]);
             }
         }
 
         for (i = 0; i < numUniqueColliders; i++)
         {
-            printf("uc %f, %f %f\n", (*simultaneousCollObjects[i].object->v)[0], (*simultaneousCollObjects[i].object->v)[1], tColl);
             // translate object to collision point
             jvec r = {(*simultaneousCollObjects[i].object->v)[0] * tColl, (*simultaneousCollObjects[i].object->v)[1] * tColl};
             jcObjectTranslate(simultaneousCollObjects[i].object, r);
@@ -501,8 +495,16 @@ void processCollisions(jcEngInternal * eng)
             r[0] = (*simultaneousCollObjects[i].object->v)[0] * -tColl;
             r[1] = (*simultaneousCollObjects[i].object->v)[1] * -tColl;
             jcObjectTranslate(simultaneousCollObjects[i].object, r);
-            printf("uc (post) %f, %f\n", (*simultaneousCollObjects[i].object->v)[0], (*simultaneousCollObjects[i].object->v)[1]);
         }
+
+        jfloat t;
+        JC_SIDE side;
+        if (checkCollision(collisionList[0].pairing, tRem, &t, &side))
+        {
+            printf("after collision resoultion objects are still colliding, something seriously wrong: tcoll %f t %f\n", tColl, t);
+            exit(1);
+        }
+
 
         juint numCollisionsRemoved = 0;
         removeCollisionsInvolvingObjects(collisionList, num_collisions, simultaneousCollObjects, numUniqueColliders, &numCollisionsRemoved);
@@ -658,6 +660,9 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
     jfloat cp[2]; // two points where circle first touches extended line, and finishes touching it
     AXIS ax2 = (ax + 1) % NUM_AXIS;
 
+    if (v[ax2] == 0)
+        return false;
+
     // calculate two times when circle first crosses extended line, and next crosses it
     t[0] = (b[ax2] - c.c[ax2] - c.r) / v[ax2];
     t[1] = (b[ax2] - c.c[ax2] + c.r) / v[ax2];
@@ -715,8 +720,19 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
     return getDesiredSolutionIfExtant(t, num_solns, tc);
 }
 
+jfloat jvecMagSq(jvec v)
+{
+    return v[0]*v[0] + v[1]*v[1];
+}
+
 bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
 {
+    // if circles are initially colliding return false, I think
+    // this makes more sense than returning t=0
+    jvec centreLine = {(c1.c[0] - c2.c[0]), (c1.c[1] - c2.c[1])};
+    if (jvecMagSq(centreLine) <  (c1.r + c2.r) * (c1.r + c2.r))
+        return false;
+
     jcircle c3 = {{c2.c[0], c2.c[1]}, c1.r + c2.r};
     jfloat tt[2];
 
@@ -728,6 +744,75 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
     return getDesiredSolutionIfExtant(tt, 2, t);
 }
 
+bool circleWithRectStaticDetect(jcircle c, jrect r)
+{
+    // first off, check if circle lies entirely inside the rectangle
+    jfloat lSide = c.c[0] - c.r;
+    jfloat rSide = c.c[0] + c.r;
+    jfloat bSide = c.c[1] - c.r;
+    jfloat tSide = c.c[0] + c.r;
+
+    if (lSide > r.bl[0] && rSide < r.tr[0] && bSide > r.bl[1] && tSide < r.tr[1])
+    {
+        return true;
+    }
+
+    // next, check if circle is currently intersecting any of the sides
+    // left side
+    if ((c.c[0] - r.bl[0]) * (c.c[0] - r.bl[0]) < c.r * c.r)
+    {
+        jfloat x = sqrtf(c.r * c.r - (r.bl[0] - c.c[0]) * (r.bl[0] - c.c[0]));
+        jfloat intP[2] = {c.c[1] - x, c.c[1] + x}; 
+
+        if (intP[0] > r.bl[1] && intP[0] < r.tr[1])
+            return true;
+
+        if (intP[1] > r.bl[1] && intP[0] < r.tr[1])
+            return true;
+    }
+
+    // right side
+    if ((c.c[0] - r.tr[0]) * (c.c[0] - r.tr[0]) < c.r * c.r)
+    {
+        jfloat x = sqrtf(c.r * c.r - (r.tr[0] - c.c[0]) * (r.tr[0] - c.c[0]));
+        jfloat intP[2] = {c.c[1] - x, c.c[1] + x}; 
+
+        if (intP[0] > r.bl[1] && intP[0] < r.tr[1])
+            return true;
+
+        if (intP[1] > r.bl[1] && intP[0] < r.tr[1])
+            return true;
+    }
+
+    // bottom side
+    if ((c.c[1] - r.bl[1]) * (c.c[1] - r.bl[1]) < c.r * c.r)
+    {
+        jfloat x = sqrtf(c.r * c.r - (r.bl[1] - c.c[1]) * (r.bl[1] - c.c[1]));
+        jfloat intP[2] = {c.c[0] - x, c.c[0] + x}; 
+
+        if (intP[0] > r.bl[0] && intP[0] < r.tr[0])
+            return true;
+
+        if (intP[1] > r.bl[0] && intP[0] < r.tr[0])
+            return true;
+    }
+
+    // top side
+    if ((c.c[1] - r.tr[1]) * (c.c[1] - r.tr[1]) < c.r * c.r)
+    {
+        jfloat x = sqrtf(c.r * c.r - (r.tr[1] - c.c[1]) * (r.tr[1] - c.c[1]));
+        jfloat intP[2] = {c.c[0] - x, c.c[0] + x}; 
+
+        if (intP[0] > r.bl[0] && intP[0] < r.tr[0])
+            return true;
+
+        if (intP[1] > r.bl[0] && intP[0] < r.tr[0])
+            return true;
+    }
+
+    return false;
+}
+
 bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc, JC_SIDE * collSide)
 {
     jfloat h = r.tr[1] - r.bl[1];
@@ -735,6 +820,13 @@ bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc, JC_SIDE *
     jfloat t = 2;
     jfloat tTemp = 2;
     JC_SIDE side = JC_SIDE_NONE;
+
+    // don't deal with case of circle initially colliding with rectangle,
+    // so return false in this case
+    if (circleWithRectStaticDetect(c, r))
+    {
+        return false;
+    }
 
     if (circleWithAxisParallelSegCollDetect(c, v, r.bl, h, AXIS_Y, &tTemp))
     {
