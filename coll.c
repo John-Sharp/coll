@@ -369,13 +369,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t, JC_SIDE * side)
     return false;
 }
 
-typedef struct simultaneousCollObject
-{
-    jcObject * object;
-    jvec deltav;
-} simultaneousCollObject;
-
-void removeCollisionsInvolvingObjects(collision * collisionList, juint numCollisions, simultaneousCollObject * objectList, juint numObjects, juint * numCollisionsRemoved)
+void removeCollisionsInvolvingObjects(collision * collisionList, juint numCollisions, jcObject ** objectList, juint numObjects, juint * numCollisionsRemoved)
 {
     *numCollisionsRemoved = 0;
     juint i;
@@ -386,14 +380,14 @@ void removeCollisionsInvolvingObjects(collision * collisionList, juint numCollis
         juint j;
         for  (j = 0; j < numObjects; j++)
         {
-            if (cc->pairing->objects[0] == objectList[j].object)
+            if (cc->pairing->objects[0] == objectList[j])
             {
                 *numCollisionsRemoved += 1;
                 cc->t = 2;
                 break;
             }
 
-            if (cc->pairing->objects[1] == objectList[j].object)
+            if (cc->pairing->objects[1] == objectList[j])
             {
                 *numCollisionsRemoved += 1;
                 cc->t = 2;
@@ -437,83 +431,39 @@ void processCollisions(jcEngInternal * eng)
         jfloat tColl = collisionList[0].t;
         jfloat tRem = 1 - collisionList[0].t; 
 
-        simultaneousCollObject simultaneousCollObjects[2*MAX_COLLISIONS];
-        memset(simultaneousCollObjects, 0, sizeof(simultaneousCollObjects));
-        juint i;
 
-        juint numUniqueColliders = 0;
-        for (i = 0; i < MAX_COLLISIONS; i++)
-        {
-            if (collisionList[i].t != tColl)
-            {
-                break;
-            }
+        jcObject * o1 = collisionList[0].pairing->objects[0];
+        jcObject * o2 = collisionList[0].pairing->objects[1];
+        jvec deltavs[2];
+        collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t, collisionList[0].side, deltavs);
 
-            jvec deltavs[2];
-            collisionList[i].pairing->handler(collisionList[i].pairing->objects, collisionList[i].t, collisionList[i].side, deltavs);
+        // translate object to collision point
+        jvec r = {(*o1->v)[0] * tColl, (*o1->v)[1] * tColl};
+        jcObjectTranslate(o1, r);
 
-            juint j;
-            bool found[2] = {false, false};
-            for (j = 0; j < numUniqueColliders; j++)
-            {
-                if (collisionList[i].pairing->objects[0] == simultaneousCollObjects[j].object)
-                {
-                    found[0] = true;
-                    jvecAdd(simultaneousCollObjects[j].deltav, deltavs[0]);
-                }
-                if (collisionList[i].pairing->objects[1] == simultaneousCollObjects[j].object)
-                {
-                    found[1] = true;
-                    jvecAdd(simultaneousCollObjects[j].deltav, deltavs[1]);
+        r[0] = (*o2->v)[0] * tColl;
+        r[1] = (*o2->v)[1] * tColl;
+        jcObjectTranslate(o2, r);
 
-                }
-            }
+        // add delta v to velocity
+        jvecAdd((*o1->v), deltavs[0]);
+        jvecAdd((*o2->v), deltavs[1]);
 
-            if (!found[0])
-            {
-                simultaneousCollObjects[numUniqueColliders].object = collisionList[i].pairing->objects[0];
-                jvecAdd(simultaneousCollObjects[numUniqueColliders++].deltav, deltavs[0]);
-            }
+        // retard collision objects v t
+        r[0] = (*o1->v)[0] * -tColl;
+        r[1] = (*o1->v)[1] * -tColl;
+        jcObjectTranslate(o1, r);
 
-            if (!found[1])
-            {
-                simultaneousCollObjects[numUniqueColliders].object = collisionList[i].pairing->objects[1];
-                jvecAdd(simultaneousCollObjects[numUniqueColliders++].deltav, deltavs[1]);
-            }
-        }
-
-        for (i = 0; i < numUniqueColliders; i++)
-        {
-            // translate object to collision point
-            jvec r = {(*simultaneousCollObjects[i].object->v)[0] * tColl, (*simultaneousCollObjects[i].object->v)[1] * tColl};
-            jcObjectTranslate(simultaneousCollObjects[i].object, r);
-
-            // add delta v to velocity
-            jvecAdd((*simultaneousCollObjects[i].object->v), simultaneousCollObjects[i].deltav);
-
-            // retard collision objects v t
-            r[0] = (*simultaneousCollObjects[i].object->v)[0] * -tColl;
-            r[1] = (*simultaneousCollObjects[i].object->v)[1] * -tColl;
-            jcObjectTranslate(simultaneousCollObjects[i].object, r);
-        }
-
-        jfloat t;
-        JC_SIDE side;
-        if (checkCollision(collisionList[0].pairing, tRem, &t, &side))
-        {
-            printf("after collision resoultion objects are still colliding, something seriously wrong: tcoll %f t %f\n", tColl, t);
-            exit(1);
-        }
-
+        r[0] = (*o2->v)[0] * -tColl;
+        r[1] = (*o2->v)[1] * -tColl;
+        jcObjectTranslate(o2, r);
 
         juint numCollisionsRemoved = 0;
-        removeCollisionsInvolvingObjects(collisionList, num_collisions, simultaneousCollObjects, numUniqueColliders, &numCollisionsRemoved);
+        removeCollisionsInvolvingObjects(collisionList, num_collisions, collisionList[0].pairing->objects, 2, &numCollisionsRemoved);
         num_collisions -= numCollisionsRemoved;
 
         qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
 
-        // go through all pairings, checking for collisions with pairings involving actors 
-        // in last resolved collision
         for (p = eng->pairingList; p != NULL; p = p->next)
         {
             jcPairing * pairing = p->val;
@@ -527,7 +477,6 @@ void processCollisions(jcEngInternal * eng)
                 // JC_SIDE side;
                 if (checkCollision(pairing, tRem, &t, &side))
                 {
-                    printf("hwllo %f\n", t);
                     collisionList[num_collisions].pairing = pairing;
                     collisionList[num_collisions].t = t;
                     collisionList[num_collisions].side = side;
