@@ -139,6 +139,21 @@ void removePairings(jcEngInternal * eng, juint groupNum1, juint groupNum2)
     }
 }
 
+bool makePairing(jcEngInternal * eng, jcObject * o1, jcObject * o2, collHandler handler)
+{
+    jcPairing * pairing = malloc(sizeof(*pairing));
+    if (!pairing)
+    {
+        return false;
+    }
+    pairing->objects[0] = o1;
+    pairing->objects[1] = o2;
+    pairing->handler = handler;
+    eng->pairingList = jcPairingListAdd(eng->pairingList, pairing);
+
+    return true;
+}
+
 bool constructPairings(jcEngInternal * eng, jcRegisteredCollHandler * ch)
 {
     jcObjectList * objectsGroup1 = NULL;
@@ -162,11 +177,21 @@ bool constructPairings(jcEngInternal * eng, jcRegisteredCollHandler * ch)
 
     // In special case of group self-interaction,
     // this step ensures we don't get double-counting
-    if (ch->groupNums[0] == ch->groupNums[1])
+    if  (ch->groupNums[0] == ch->groupNums[1])
     {
-        objectsGroup2 = objectsGroup1;
-        objectsGroup1 = objectsGroup1->next;
-        objectsGroup2->next = NULL;
+        jcObjectList * ln2;
+        for (ln = objectsGroup1; ln != NULL; ln = ln->next)
+        {
+            for (ln2 = ln->next; ln2 != NULL; ln2 = ln2->next)
+            {
+                if (!makePairing(eng, ln->val, ln2->val, ch->handler))
+                {
+                    // TODO destroy objectsGroup1, objectsGroup2
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     jcObjectList * ln2;
@@ -174,16 +199,11 @@ bool constructPairings(jcEngInternal * eng, jcRegisteredCollHandler * ch)
     {
         for (ln2 = objectsGroup2; ln2 != NULL; ln2 = ln2->next)
         {
-            jcPairing * pairing = malloc(sizeof(*pairing));
-            if (!pairing)
+            if (!makePairing(eng, ln->val, ln2->val, ch->handler))
             {
                 // TODO destroy objectsGroup1, objectsGroup2
                 return false;
             }
-            pairing->objects[0] = ln->val;
-            pairing->objects[1] = ln2->val;
-            pairing->handler = ch->handler;
-            eng->pairingList = jcPairingListAdd(eng->pairingList, pairing);
         }
     }
     return true;
