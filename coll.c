@@ -454,8 +454,6 @@ void processCollisions(jcEngInternal * eng)
 
         jcObject * o1 = collisionList[0].pairing->objects[0];
         jcObject * o2 = collisionList[0].pairing->objects[1];
-        jvec deltavs[2];
-        collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t, collisionList[0].side, deltavs);
 
         // translate object to collision point
         jvec r = {(*o1->v)[0] * tColl, (*o1->v)[1] * tColl};
@@ -464,6 +462,9 @@ void processCollisions(jcEngInternal * eng)
         r[0] = (*o2->v)[0] * tColl;
         r[1] = (*o2->v)[1] * tColl;
         jcObjectTranslate(o2, r);
+
+        jvec deltavs[2];
+        collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t, collisionList[0].side, deltavs);
 
         // add delta v to velocity
         jvecAdd((*o1->v), deltavs[0]);

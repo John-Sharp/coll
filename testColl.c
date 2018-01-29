@@ -748,7 +748,7 @@ jcPairing * fillPairing(jcPairing * p, juint * pairingObjectIndicies, completeOb
     return p;
 }
 
-void testHandler1(jcObject ** objects, jfloat t, JC_SIDE side)
+void testHandler1(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)
 {
     testHandlerContext * ctx = objects[0]->owner;
     ctx->handlerIndicies[ctx->numHandlersCalled] = 1;
