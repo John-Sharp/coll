@@ -59,9 +59,9 @@ typedef struct oneDimCollObj
 
 oneDimCollObj oneDCollDetect(uint32_t a, int32_t b1, int32_t b2, int32_t v);
 
-#include "listCode/jcObjectList.c"
-#include "listCode/jcPairingList.c"
-#include "listCode/jcRegisteredCollHandlerList.c"
+#include "listCode/jcObjectList.inc"
+#include "listCode/jcPairingList.inc"
+#include "listCode/jcRegisteredCollHandlerList.inc"
 
 jcEngInternal * initJcEng(jcEngInternal * eng)
 {
