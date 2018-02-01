@@ -553,35 +553,6 @@ bool solveQuadratic(jdouble a, jdouble b, jdouble c, jfloat *x)
     return true;
 }
 
-jfloat * jvecAdd(jvec a, jvec b)
-{
-    a[0] += b[0];
-    a[1] += b[1];
-
-    return a;
-}
-
-jfloat * jvecSub(jvec a, jvec b)
-{
-    a[0] -= b[0];
-    a[1] -= b[1];
-
-    return a;
-}
-
-jfloat * jvecNorm(jvec a)
-{
-    jfloat mag = sqrtf(a[0]*a[0] + a[1]*a[1]);
-    a[0] /= mag;
-    a[1] /= mag;
-    return a;
-}
-
-jfloat jvecDot(jvec a, jvec b)
-{
-    return a[0]*b[0] + a[1]*b[1];
-}
-
 bool circleLineCollDetect(jcircle ci, jvec p, jvec v, jfloat * t)
 {
     jfloat a = jvecDot(v, v);

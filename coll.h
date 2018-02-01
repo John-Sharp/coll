@@ -1,31 +1,7 @@
 #ifndef COLL_H
 #define COLL_H
 
-#include <stdint.h>
-#include <stdbool.h>
-
-typedef uint32_t juint;
-typedef int32_t jint;
-typedef float jfloat;
-typedef double jdouble;
-
-typedef jfloat jvec[2];
-
-jfloat * jvecAdd(jvec a, jvec b);
-jfloat * jvecSub(jvec a, jvec b);
-jfloat * jvecNorm(jvec a);
-
-typedef struct jcircle
-{
-    jvec c; // centre
-    jfloat r; // radius
-} jcircle;
-
-typedef struct jrect
-{
-  jvec bl; // bottom left
-  jvec tr; // top right
-} jrect;
+#include "../jTypes/jTypes.h"
 
 typedef enum SHAPE_TYPE
 {
