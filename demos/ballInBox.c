@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include "../coll.h"
+#include "../../engine/engine.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define ISQRT2 0.7071067811865475
@@ -21,6 +22,13 @@ enum
     BALL_R = 10,
 };
 
+enum
+{
+    DECAL_BOX,
+    DECAL_BALL,
+    NUM_DECALS
+};
+
 typedef struct ballInitParams
 {
     jvec v;
@@ -36,146 +44,119 @@ ballInitParams INIT_PARAMS[] = {
     {v: {0.0, 0.002}, c: {180, 90}}
 };
 
-
-typedef enum BOX_TYPE
-{
-    BOX_TYPE_H,
-    BOX_TYPE_V
-} BOX_TYPE;
 typedef struct box
 {
-    context * ctx;
+    actor a;
+    sprite s;
+
     jvec v;
     jrect collBody;
-
-    BOX_TYPE boxType;
-
-    SDL_Rect dest;
+    jfloat im;
 } box;
 
 typedef struct ball
 {
-    context * ctx;
+    actor a;
+    sprite s;
+
     jvec v;
     jcircle collBody;
     jfloat im; 
-
-    SDL_Rect dest;
-    SDL_Texture *tex;
 } ball;
 
-/**
- * Context structure that will be passed to the loop handler
- */
-struct context
+typedef struct ballInBoxEngine
 {
-    SDL_Renderer *renderer;
+    engine * engine;
+    jcEng * collEng;
+
+
+    decal decals[NUM_DECALS];
 
     ball balls[ARRAY_SIZE(INIT_PARAMS)];
     box boxes[TOTAL_BOXES];
 
-    SDL_Texture *boxTexture;
-    SDL_Texture *ballTexture;
-    jcEng * collEng;
-};
+} ballInBoxEngine;
 
-int getTextures(context * ctx)
+void boxUpdateSprite(box * b)
 {
-  SDL_Surface *image = IMG_Load("assets/box.png");
-  if (!image)
-  {
-     printf("IMG_Load: %s\n", IMG_GetError());
-     return 0;
-  }
-  ctx->boxTexture = SDL_CreateTextureFromSurface(ctx->renderer, image);
-
-  SDL_FreeSurface (image);
-
-  image = IMG_Load("assets/ball.png");
-  if (!image)
-  {
-     printf("IMG_Load: %s\n", IMG_GetError());
-     return 0;
-  }
-  ctx->ballTexture = SDL_CreateTextureFromSurface(ctx->renderer, image);
-
-  SDL_FreeSurface (image);
-
-  return 1;
+    b->s.rect.bl[0] = b->collBody.bl[0];
+    b->s.rect.bl[1] = b->collBody.bl[1];
+    b->s.rect.tr[0] = b->collBody.tr[0];
+    b->s.rect.tr[1] = b->collBody.tr[1];
 }
 
-void initBox(box * b, jfloat x, jfloat y, BOX_TYPE type, context * ctx)
+void boxRenderHandler(actor * a)
 {
-    b->ctx = ctx;
+    box * b = a->owner;
+    boxUpdateSprite(b);
+    engineSpriteRender(b->a.eng, &b->s);
+}
+
+void initBox(box * b, jfloat x, jfloat y, ballInBoxEngine * e)
+{
+    b->a.owner = b;
+    b->a.renderHandler = boxRenderHandler;
+    b->a.logicHandler = NULL;
+    engineActorReg(e->engine, &b->a);
+
+    b->s.d = &e->decals[DECAL_BOX];
+
     b->v[0] = 0;
     b->v[1] = 0;
-
-    b->boxType = type;
 
     b->collBody.bl[0] = x;
     b->collBody.bl[1] = y;
     b->collBody.tr[0] = b->collBody.bl[0] + 20;
     b->collBody.tr[1] = b->collBody.bl[1] + 20;
 
-    registerRect(ctx->collEng, &b->collBody, &b->v, 1, b);
+    boxUpdateSprite(b);
+
+    registerRect(e->collEng, &b->collBody, &b->v, 1, b);
 }
 
-void createBoxes(context * ctx)
+void createBoxes(ballInBoxEngine * e)
 {
     juint i = 0;
     for (i = 0; i < CAGE_W; i++)
     {
-        initBox(&ctx->boxes[i], i * BOX_W + CAGE_BL_X, CAGE_BL_Y, BOX_TYPE_H, ctx);
+        initBox(&e->boxes[i], i * BOX_W + CAGE_BL_X, CAGE_BL_Y, e);
     }
 
     for (i = 0; i < CAGE_H - 2; i++)
     {
-        initBox(&ctx->boxes[CAGE_W + i], CAGE_BL_X, (i + 1)  * BOX_H + CAGE_BL_Y, BOX_TYPE_V, ctx);
-        initBox(&ctx->boxes[CAGE_W + CAGE_H - 2 + i], (CAGE_W - 1) * BOX_W + CAGE_BL_X, (i + 1) * BOX_H + CAGE_BL_Y, BOX_TYPE_V, ctx);
+        initBox(&e->boxes[CAGE_W + i], CAGE_BL_X, (i + 1)  * BOX_H + CAGE_BL_Y, e);
+        initBox(&e->boxes[CAGE_W + CAGE_H - 2 + i], (CAGE_W - 1) * BOX_W + CAGE_BL_X, (i + 1) * BOX_H + CAGE_BL_Y, e);
     }
 
     for (i = 0; i < CAGE_W; i++)
     {
-        initBox(&ctx->boxes[CAGE_W + 2*(CAGE_H - 2) + i], i * BOX_W + CAGE_BL_X, (CAGE_H - 1) * BOX_H + CAGE_BL_Y, BOX_TYPE_H, ctx);
+        initBox(&e->boxes[CAGE_W + 2*(CAGE_H - 2) + i], i * BOX_W + CAGE_BL_X, (CAGE_H - 1) * BOX_H + CAGE_BL_Y, e);
     }
 }
 
-void boxUpdateDest(box * b)
+void ballUpdateSprite(ball * b)
 {
-    b->dest.w = b->collBody.tr[0] - b->collBody.bl[0];
-    b->dest.h = b->collBody.tr[1] - b->collBody.bl[1];
-
-    b->dest.x = b->collBody.bl[0];
-    b->dest.y = -1 * b->collBody.bl[1] + (400 - b->dest.h);
+    b->s.rect.bl[0] = b->collBody.c[0] - BALL_R;
+    b->s.rect.bl[1] = b->collBody.c[1] - BALL_R;
+    b->s.rect.tr[0] = b->collBody.c[0] + BALL_R;
+    b->s.rect.tr[1] = b->collBody.c[1] + BALL_R;
 }
 
-int ballGetTexture(ball * b)
+void ballRenderHander(actor * a)
 {
-  SDL_Surface *image = IMG_Load("assets/ball.png");
-  if (!image)
-  {
-     printf("IMG_Load: %s\n", IMG_GetError());
-     return 0;
-  }
-  b->tex = SDL_CreateTextureFromSurface(b->ctx->renderer, image);
-
-  SDL_FreeSurface (image);
-
-  return 1;
+    ball * b = a->owner;
+    ballUpdateSprite(b);
+    engineSpriteRender(b->a.eng, &b->s);
 }
 
-void ballUpdateDest(ball*b)
+void initBall(ball * b, const ballInitParams * params, ballInBoxEngine * e)
 {
-    b->dest.w = 2 * b->collBody.r;
-    b->dest.h = 2 * b->collBody.r;
+    b->a.owner = b;
+    b->a.renderHandler = ballRenderHander;
+    b->a.logicHandler = NULL;
+    engineActorReg(e->engine, &b->a);
 
-    b->dest.x = b->collBody.c[0] - b->collBody.r;
-    b->dest.y = -1 * (b->collBody.c[1] - b->collBody.r) + (400 - b->dest.h);
-}
-
-void initBall(ball * b, const ballInitParams * params, context * ctx)
-{
-    b->ctx = ctx;
+    b->s.d = &e->decals[DECAL_BALL];
 
     b->im = 1;
 
@@ -186,19 +167,16 @@ void initBall(ball * b, const ballInitParams * params, context * ctx)
     b->collBody.c[1] = params->c[1];
     b->collBody.r = BALL_R;
 
-    ballUpdateDest(b);
-
-    registerCircle(ctx->collEng, &b->collBody, &b->v, 2, b);
-
-    ballGetTexture(b);
+    ballUpdateSprite(b);
+    registerCircle(e->collEng, &b->collBody, &b->v, 2, b);
 }
 
-void createBalls(context * ctx)
+void createBalls(ballInBoxEngine * e)
 {
     juint i;
     for (i = 0; i < ARRAY_SIZE(INIT_PARAMS); i++)
     {
-        initBall(&ctx->balls[i], &INIT_PARAMS[i], ctx);
+        initBall(&e->balls[i], &INIT_PARAMS[i], e);
     }
 }
 
@@ -274,67 +252,36 @@ void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * delt
     momentumResolver(ball->v, ball->im, box->v, 0, n, 1, *deltavBall, *deltavBox);
 }
 
-/**
- * Loop handler that gets called each animation frame,
- * process the input, update the position of the owl and 
- * then render the texture
- */
-void loop_handler(void *arg)
+void ballInBoxPreLogic(engine * e)
 {
-    context *ctx = arg;
-
-    jcEngDoStep(ctx->collEng);
-
-    SDL_RenderClear(ctx->renderer);
-    juint i;
-
-    for (i = 0; i < ARRAY_SIZE(INIT_PARAMS); i++)
-    {
-        ballUpdateDest(&ctx->balls[i]);
-        SDL_RenderCopy(ctx->renderer, ctx->ballTexture, NULL, &ctx->balls[i].dest);
-    }
-    for (i = 0; i < TOTAL_BOXES; i++)
-    {
-        boxUpdateDest(&ctx->boxes[i]);
-        SDL_RenderCopy(ctx->renderer, ctx->boxTexture, NULL, &ctx->boxes[i].dest);
-    }
-    SDL_RenderPresent(ctx->renderer);
+    ballInBoxEngine * eng = e->owner;
+    jcEngDoStep(eng->collEng);
 }
 
 int main()
 {
-    SDL_Window *window;
-    context ctx;
+    struct ballInBoxEngine ballInBoxEngine;
+    ballInBoxEngine.engine = createEngine(600, 400, &ballInBoxEngine);
 
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_CreateWindowAndRenderer(600, 400, 0, &window, &ctx.renderer);
-    SDL_SetRenderDrawColor(ctx.renderer, 255, 255, 255, 255);
+    juint boxTexture = engineLoadTexture(ballInBoxEngine.engine, "assets/box.png");
+    decalInit(&ballInBoxEngine.decals[DECAL_BOX], ballInBoxEngine.engine,
+            boxTexture, engineGetTextureRect(ballInBoxEngine.engine, boxTexture));
 
-    ctx.collEng = createJcEng();
-    getTextures(&ctx);
-    createBalls(&ctx);
-    createBoxes(&ctx);
 
-    registerCollHandler(ctx.collEng, 1, 2, boxBallCollHandler);
-    registerCollHandler(ctx.collEng, 2, 2, ballBallCollHandler);
+    juint ballTexture = engineLoadTexture(ballInBoxEngine.engine, "assets/ball.png");
+    decalInit(&ballInBoxEngine.decals[DECAL_BALL], ballInBoxEngine.engine,
+            ballTexture, engineGetTextureRect(ballInBoxEngine.engine, ballTexture));
 
-    /**
-     * Schedule the main loop handler to get 
-     * called on each animation frame
-     */
-    bool carryOn = true;
-    while (carryOn)
-    {
-        loop_handler(&ctx);
+    ballInBoxEngine.collEng = createJcEng();
 
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                carryOn = false;
-            }
-        }
-    }
-    // emscripten_set_main_loop_arg(loop_handler, &ctx, -1, 1);
+    createBalls(&ballInBoxEngine);
+    createBoxes(&ballInBoxEngine);
 
+    registerCollHandler(ballInBoxEngine.collEng, 1, 2, boxBallCollHandler);
+    registerCollHandler(ballInBoxEngine.collEng, 2, 2, ballBallCollHandler);
+
+    enginePreLogicCallBackReg(ballInBoxEngine.engine, ballInBoxPreLogic);
+
+    engineStart(ballInBoxEngine.engine);
     return 0;
 }
