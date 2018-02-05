@@ -5,7 +5,6 @@
 #include "../coll.h"
 #include "../../engine/engine.h"
 
-#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define ISQRT2 0.7071067811865475
 
 enum 
@@ -18,6 +17,14 @@ enum
     CAGE_BL_Y = 20,
     TOTAL_BOXES = 2 * CAGE_W + 2 * (CAGE_H - 1),
     BALL_R = 10,
+};
+
+enum 
+{
+    GS_LEFT = 1,
+    GS_RIGHT = 2,
+    GS_UP = 3,
+    GS_DOWN = 4,
 };
 
 enum
@@ -33,14 +40,7 @@ typedef struct ballInitParams
     jvec c;
 } ballInitParams;
 
-ballInitParams INIT_PARAMS[] = {
-//    {v: {0.031, -0.021}, c: {150, 150}},
-//    {v: {-0.31, -0.021}, c: {180.017555, 160.065186}},
-    {v: {0.0031, -0.03}, c: {180, 150}},
-
-    {v: {0.01, -0.002}, c: {180.0, 180.065186}},
-    {v: {0.0, 0.002}, c: {180, 90}}
-};
+ballInitParams ballInitParamsI = {v : {0,0}, c : {180, 150}};
 
 typedef struct box
 {
@@ -62,7 +62,7 @@ typedef struct ball
     jfloat im; 
 } ball;
 
-typedef struct ballInBoxEngine
+typedef struct controlledBallEngine
 {
     engine * engine;
     jcEng * collEng;
@@ -70,10 +70,10 @@ typedef struct ballInBoxEngine
 
     decal decals[NUM_DECALS];
 
-    ball balls[ARRAY_SIZE(INIT_PARAMS)];
+    ball ball;
     box boxes[TOTAL_BOXES];
 
-} ballInBoxEngine;
+} controlledBallEngine;
 
 void boxUpdateSprite(box * b)
 {
@@ -90,7 +90,7 @@ void boxRenderHandler(actor * a)
     engineSpriteRender(b->a.eng, &b->s);
 }
 
-void initBox(box * b, jfloat x, jfloat y, ballInBoxEngine * e)
+void initBox(box * b, jfloat x, jfloat y, controlledBallEngine * e)
 {
     b->a.owner = b;
     b->a.renderHandler = boxRenderHandler;
@@ -112,7 +112,7 @@ void initBox(box * b, jfloat x, jfloat y, ballInBoxEngine * e)
     registerRect(e->collEng, &b->collBody, &b->v, 1, b);
 }
 
-void createBoxes(ballInBoxEngine * e)
+void createBoxes(controlledBallEngine * e)
 {
     juint i = 0;
     for (i = 0; i < CAGE_W; i++)
@@ -147,7 +147,7 @@ void ballRenderHander(actor * a)
     engineSpriteRender(b->a.eng, &b->s);
 }
 
-void initBall(ball * b, const ballInitParams * params, ballInBoxEngine * e)
+void initBall(ball * b, const ballInitParams * params, controlledBallEngine * e)
 {
     b->a.owner = b;
     b->a.renderHandler = ballRenderHander;
@@ -167,15 +167,6 @@ void initBall(ball * b, const ballInitParams * params, ballInBoxEngine * e)
 
     ballUpdateSprite(b);
     registerCircle(e->collEng, &b->collBody, &b->v, 2, b);
-}
-
-void createBalls(ballInBoxEngine * e)
-{
-    juint i;
-    for (i = 0; i < ARRAY_SIZE(INIT_PARAMS); i++)
-    {
-        initBall(&e->balls[i], &INIT_PARAMS[i], e);
-    }
 }
 
 void momentumResolver(jvec va, jfloat ima, jvec vb, jfloat imb, jvec n, jfloat restitution, jvec deltava, jvec deltavb)
@@ -198,7 +189,7 @@ void ballBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * del
     jvec n = {ballA->collBody.c[0], ballA->collBody.c[1]};
     jvecNorm(jvecSub(n, ballB->collBody.c));
 
-    momentumResolver(ballA->v, ballA->im, ballB->v, ballB->im, n, 1, deltav[0], deltav[1]);
+    momentumResolver(ballA->v, ballA->im, ballB->v, ballB->im, n, 0, deltav[0], deltav[1]);
 }
 
 void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)
@@ -252,34 +243,80 @@ void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * delt
 
 void ballInBoxPreLogic(engine * e)
 {
-    ballInBoxEngine * eng = e->owner;
+    controlledBallEngine * eng = e->owner;
+
+    if (isStateActive(GS_LEFT))
+    {
+        eng->ball.v[0] = -0.1;
+    }
+    else if (isStateActive(GS_RIGHT))
+    {
+        eng->ball.v[0] = 0.1;
+    }
+    else 
+    {
+        eng->ball.v[0] = 0;
+    }
+    if (isStateActive(GS_UP))
+    {
+        eng->ball.v[1] = 0.1;
+    }
+    else if (isStateActive(GS_DOWN))
+    {
+        eng->ball.v[1] = -0.1;
+    }
+    else{
+        eng->ball.v[1] = 0;
+    }
+
     jcEngDoStep(eng->collEng);
 }
 
 int main()
 {
-    struct ballInBoxEngine ballInBoxEngine;
-    ballInBoxEngine.engine = createEngine(600, 400, &ballInBoxEngine);
+    struct controlledBallEngine controlledBallEngine;
+    controlledBallEngine.engine = createEngine(600, 400, &controlledBallEngine);
 
-    juint boxTexture = engineLoadTexture(ballInBoxEngine.engine, "assets/box.png");
-    decalInit(&ballInBoxEngine.decals[DECAL_BOX], ballInBoxEngine.engine,
-            boxTexture, engineGetTextureRect(ballInBoxEngine.engine, boxTexture));
+    juint boxTexture = engineLoadTexture(controlledBallEngine.engine, "assets/box.png");
+    decalInit(&controlledBallEngine.decals[DECAL_BOX], controlledBallEngine.engine,
+            boxTexture, engineGetTextureRect(controlledBallEngine.engine, boxTexture));
 
 
-    juint ballTexture = engineLoadTexture(ballInBoxEngine.engine, "assets/ball.png");
-    decalInit(&ballInBoxEngine.decals[DECAL_BALL], ballInBoxEngine.engine,
-            ballTexture, engineGetTextureRect(ballInBoxEngine.engine, ballTexture));
+    juint ballTexture = engineLoadTexture(controlledBallEngine.engine, "assets/ball.png");
+    decalInit(&controlledBallEngine.decals[DECAL_BALL], controlledBallEngine.engine,
+            ballTexture, engineGetTextureRect(controlledBallEngine.engine, ballTexture));
 
-    ballInBoxEngine.collEng = createJcEng();
+    controlledBallEngine.collEng = createJcEng();
 
-    createBalls(&ballInBoxEngine);
-    createBoxes(&ballInBoxEngine);
+    initBall(&controlledBallEngine.ball, &ballInitParamsI, &controlledBallEngine);
+    createBoxes(&controlledBallEngine);
 
-    registerCollHandler(ballInBoxEngine.collEng, 1, 2, boxBallCollHandler);
-    registerCollHandler(ballInBoxEngine.collEng, 2, 2, ballBallCollHandler);
+    registerCollHandler(controlledBallEngine.collEng, 1, 2, boxBallCollHandler);
+    registerCollHandler(controlledBallEngine.collEng, 2, 2, ballBallCollHandler);
 
-    enginePreLogicCallBackReg(ballInBoxEngine.engine, ballInBoxPreLogic);
+    enginePreLogicCallBackReg(controlledBallEngine.engine, ballInBoxPreLogic);
 
-    engineStart(ballInBoxEngine.engine);
+    keyStateBinding binding;
+    binding.k = SDLK_LEFT;
+    binding.s = GS_LEFT;
+    binding.t = BINDING_CONTINUOUS;
+    addBinding(&binding);
+
+    binding.k = SDLK_RIGHT;
+    binding.s = GS_RIGHT;
+    binding.t = BINDING_CONTINUOUS;
+    addBinding(&binding);
+
+    binding.k = SDLK_UP;
+    binding.s = GS_UP;
+    binding.t = BINDING_CONTINUOUS;
+    addBinding(&binding);
+
+    binding.k = SDLK_DOWN;
+    binding.s = GS_DOWN;
+    binding.t = BINDING_CONTINUOUS;
+    addBinding(&binding);
+
+    engineStart(controlledBallEngine.engine);
     return 0;
 }
