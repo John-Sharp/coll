@@ -769,13 +769,13 @@ bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc, JC_SIDE *
         return false;
     }
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.bl, h, AXIS_Y, &tTemp))
+    if (v[0] > 0 && circleWithAxisParallelSegCollDetect(c, v, r.bl, h, AXIS_Y, &tTemp))
     {
         side = JC_SIDE_L;
         t = tTemp;
     }
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.tr, -h, AXIS_Y, &tTemp))
+    if (v[0] < 0 && circleWithAxisParallelSegCollDetect(c, v, r.tr, -h, AXIS_Y, &tTemp))
     {
         if (tTemp < t)
         {
@@ -788,7 +788,7 @@ bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc, JC_SIDE *
         }
     }
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.bl, w, AXIS_X, &tTemp))
+    if (v[1] > 0 && circleWithAxisParallelSegCollDetect(c, v, r.bl, w, AXIS_X, &tTemp))
     {
         if (tTemp < t)
         {
@@ -801,7 +801,7 @@ bool circleWithRectCollDetect(jcircle c, jvec v, jrect r, jfloat * tc, JC_SIDE *
         }
     }
 
-    if (circleWithAxisParallelSegCollDetect(c, v, r.tr, -w, AXIS_X, &tTemp))
+    if (v[1] < 0 && circleWithAxisParallelSegCollDetect(c, v, r.tr, -w, AXIS_X, &tTemp))
     {
         if (tTemp < t)
         {
