@@ -16,6 +16,7 @@ engines: ../coll.h ../coll.c ../../jTypes/jTypes.h ../../jTypes/jTypes.c ../../e
 
 generateListCode: ../../dataStructures/templates/listTemplate.h ../../dataStructures/templates/listTemplate.inc
 	../../dataStructures/generateList.py ../../engine/listHeaders ../../engine/listCode actor:actor preLogicCallBack:preLogicCallBack
+	../../dataStructures/generateList.py ../listHeaders ../listCode jcObject:jcObject jcPairing:jcPairing jcRegisteredCollHandler:jcRegisteredCollHandler
 
 clean:
 	rm -f *.o
