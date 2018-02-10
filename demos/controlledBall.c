@@ -247,11 +247,11 @@ void ballInBoxPreLogic(engine * e)
 
     if (isStateActive(GS_LEFT))
     {
-        eng->ball.v[0] = -0.1;
+        eng->ball.v[0] = -1;
     }
     else if (isStateActive(GS_RIGHT))
     {
-        eng->ball.v[0] = 0.1;
+        eng->ball.v[0] = 1;
     }
     else 
     {
@@ -259,11 +259,11 @@ void ballInBoxPreLogic(engine * e)
     }
     if (isStateActive(GS_UP))
     {
-        eng->ball.v[1] = 0.1;
+        eng->ball.v[1] = 1;
     }
     else if (isStateActive(GS_DOWN))
     {
-        eng->ball.v[1] = -0.1;
+        eng->ball.v[1] = -1;
     }
     else{
         eng->ball.v[1] = 0;

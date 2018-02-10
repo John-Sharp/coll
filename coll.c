@@ -31,6 +31,8 @@ jcEngInternal * initJcEngInternal(jcEngInternal * eng);
 
 void processCollisions(jcEngInternal * eng);
 
+#define DELTA 0.0001
+
 typedef enum AXIS
 {
     AXIS_X = 0,
@@ -364,7 +366,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t, JC_SIDE * side)
             && pairing->objects[1]->shapeType == SHAPE_TYPE_RECT))
     {
         if (circleWithRectCollDetect(*pairing->objects[0]->shape.circle, v, *pairing->objects[1]->shape.rect, &t_temp, side) &&
-                t_temp > (1-tRem))
+                t_temp >= (1-tRem))
         {
             *t = t_temp;// + (1-tRem);
             return true;
@@ -378,7 +380,7 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t, JC_SIDE * side)
         v[0] *= -1;
         v[1] *= -1;
         if (circleWithRectCollDetect(*pairing->objects[1]->shape.circle, v, *pairing->objects[0]->shape.rect, &t_temp, side) &&
-                t_temp > (1-tRem))
+                t_temp >= (1-tRem))
         {
             *t = t_temp; // + (1-tRem);
             return true;
@@ -455,12 +457,12 @@ void processCollisions(jcEngInternal * eng)
         jcObject * o1 = collisionList[0].pairing->objects[0];
         jcObject * o2 = collisionList[0].pairing->objects[1];
 
-        // translate object to collision point
-        jvec r = {(*o1->v)[0] * tColl, (*o1->v)[1] * tColl};
+        // translate object to position just before collision point
+        jvec r = {(*o1->v)[0] * (tColl-DELTA), (*o1->v)[1] * (tColl-DELTA)};
         jcObjectTranslate(o1, r);
 
-        r[0] = (*o2->v)[0] * tColl;
-        r[1] = (*o2->v)[1] * tColl;
+        r[0] = (*o2->v)[0] * (tColl-DELTA);
+        r[1] = (*o2->v)[1] * (tColl-DELTA);
         jcObjectTranslate(o2, r);
 
         jvec deltavs[2];
@@ -631,7 +633,7 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
     // if the circle first intersects the extended line within the
     // boundaries of the line, and it happened in the time of the 
     // frame, then we know the time of first collision
-    if (t[0] > 0 && betweenPoints(cp[0], b[ax], b[ax] + h))
+    if (t[0] >= 0 && betweenPoints(cp[0], b[ax], b[ax] + h))
     {
         *tc = t[0];
         return true;
