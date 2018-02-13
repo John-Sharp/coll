@@ -1,6 +1,7 @@
 test
 demos/ballInBox
 demos/controlledBall
+demos/controlledBall2
 listCode/*
 listHeaders/*
 *.o

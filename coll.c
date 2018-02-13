@@ -31,7 +31,7 @@ jcEngInternal * initJcEngInternal(jcEngInternal * eng);
 
 void processCollisions(jcEngInternal * eng);
 
-#define DELTA 0.0001
+#define DELTA 0.001
 
 typedef enum AXIS
 {
@@ -481,6 +481,13 @@ void processCollisions(jcEngInternal * eng)
         r[1] = (*o2->v)[1] * -tColl;
         jcObjectTranslate(o2, r);
 
+	jfloat tb; JC_SIDE s2;
+        if (checkCollision(collisionList[0].pairing, tRem, &tb, &s2))
+	{
+            printf("ERROR! collision with new velocity after being retreated, really bad at t %f\n", tb);
+	}
+
+
         juint numCollisionsRemoved = 0;
         removeCollisionsInvolvingObjects(collisionList, num_collisions, collisionList[0].pairing->objects, 2, &numCollisionsRemoved);
         num_collisions -= numCollisionsRemoved;
@@ -674,7 +681,9 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
     // this makes more sense than returning t=0
     jvec centreLine = {(c1.c[0] - c2.c[0]), (c1.c[1] - c2.c[1])};
     if (jvecMagSq(centreLine) <  (c1.r + c2.r) * (c1.r + c2.r))
+    {
         return false;
+    }
 
     jcircle c3 = {{c2.c[0], c2.c[1]}, c1.r + c2.r};
     jfloat tt[2];
