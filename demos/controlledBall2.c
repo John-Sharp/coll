@@ -50,8 +50,8 @@ typedef struct ballInitParams
 } ballInitParams;
 
 ballInitParams INIT_PARAMS[] = {
-	{v : {0,0}, c : {180, 150}, collGroup : COLL_GROUP_CONTROLLED_BALL},
-        {v: {0., -0.0}, c: {180, 110}, collGroup : COLL_GROUP_BALL},
+	{v : {0,0}, c : {180, 97.000107}, collGroup : COLL_GROUP_CONTROLLED_BALL},
+        {v: {0., -1.0}, c: {180, 77}, collGroup : COLL_GROUP_BALL},
         // {v: {1.0, -0.2}, c: {180.0, 180.065186}},
         // {v: {0.0, 0.2}, c: {180, 90}}
 };
@@ -208,7 +208,6 @@ void momentumResolver(jvec va, jfloat ima, jvec vb, jfloat imb, jvec n, jfloat r
 void ballBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)
 {
 //	if (t==0)
-                        printf("ball ball coll handler called %f\n", t);
     ball * ballA = objects[0]->owner;
     ball * ballB = objects[1]->owner;
 
@@ -220,7 +219,6 @@ void ballBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * del
 
 void controlledBallBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)
 {
-                        printf("controlled ball ball coll handler called %f\n", t);
     ball * cBall = objects[0]->owner;
     ball * ball = objects[1]->owner;
 
@@ -228,6 +226,8 @@ void controlledBallBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, 
     jvecNorm(jvecSub(n, ball->collBody.c));
 
     momentumResolver(cBall->v, 0, ball->v, ball->im, n, 0, deltav[0], deltav[1]);
+    cBall->v[0] = 0;
+    cBall->v[1] = 0;
 }
 
 void boxBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav)

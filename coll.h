@@ -34,6 +34,7 @@ typedef struct jcObject
 
 } jcObject;
 
+void printJcObject(FILE * fp, jcObject *object);
 void jcObjectTranslate(jcObject *object, jvec v);
 
 typedef void (*collHandler)(jcObject ** objects, jfloat t, JC_SIDE side, jvec * deltav);

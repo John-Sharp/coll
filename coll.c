@@ -6,11 +6,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define COLL_DEBUG_MODE
+
+
 typedef struct jcPairing
 {
   jcObject * objects[2];
   collHandler handler;
 } jcPairing;
+
+void printPairing(FILE * fp, const jcPairing *pairing)
+{
+    fprintf(fp, "{\n");
+    fprintf(fp, "    \"objects\" : [");
+    printJcObject(fp, pairing->objects[0]);
+    printJcObject(fp, pairing->objects[1]);
+    fprintf(fp, "    ],");
+    fprintf(fp, "    \"handler\" : %p\n", pairing->handler);
+    fprintf(fp, "},\n");
+}
 
 typedef struct jcRegisteredCollHandler
 {
@@ -31,7 +45,7 @@ jcEngInternal * initJcEngInternal(jcEngInternal * eng);
 
 void processCollisions(jcEngInternal * eng);
 
-#define DELTA 0.001
+#define DELTA 0.0001
 
 typedef enum AXIS
 {
@@ -91,6 +105,31 @@ jfloat * jObjectGetPosn(jcObject *object)
     {
         return object->shape.rect->bl;
     }
+}
+
+void printJcObject(FILE * fp, jcObject *object)
+{
+    fprintf(fp, "{\n");
+    fprintf(fp, "    \"shapeType\" : %s\n",
+        object->shapeType == SHAPE_TYPE_CIRCLE ? "SHAPE_TYPE_CIRCLE" : "SHAPE_TYPE_RECT");
+
+    switch (object->shapeType)
+    {
+        case SHAPE_TYPE_CIRCLE:
+            fprintf(fp, "    \"circle\" : ");
+	    printJcircle(fp, object->shape.circle);
+	    break;
+        case SHAPE_TYPE_RECT:
+            fprintf(fp, "    \"rect\" : ");
+	    printJrect(fp, object->shape.rect);
+	    break;
+    }
+
+    fprintf(fp, "    \"v\" : ");
+    printJvec(fp, *object->v);
+    fprintf(fp, "    \"groupNum\" : %u\n", object->groupNum);
+    fprintf(fp, "    \"owner\" : %p\n", object->owner);
+    fprintf(fp, "},\n");
 }
 
 void jcObjectTranslate(jcObject *object, jvec v)
@@ -318,6 +357,20 @@ typedef struct collision
     jvec deltav[2];
 } collision;
 
+void printCollision(FILE * fp, const collision * c)
+{
+    fprintf(fp, "{\n");
+    fprintf(fp, "\"pairing\" : ");
+    printPairing(fp, c->pairing);
+    fprintf(fp, "\"t\" : %f,\n", c->t);
+    fprintf(fp, "\"deltav\" : [", c->t);
+    printJvec(fp, c->deltav[0]);
+    fprintf(fp, ", ");
+    printJvec(fp, c->deltav[1]);
+    fprintf(fp, "],\n");
+    fprintf(fp, "}\n");
+}
+
 enum { MAX_COLLISIONS = 40 };
 
 void initCollisionList(collision * cl)
@@ -426,6 +479,11 @@ void processCollisions(jcEngInternal * eng)
     initCollisionList(collisionList);
     juint num_collisions = 0;
 
+#ifdef COLL_DEBUG_MODE
+    static juint frame = 0;
+    FILE * dbFile = stdout;
+#endif
+
     JC_SIDE side;
 
     for (p = eng->pairingList; p != NULL; p = p->next)
@@ -447,12 +505,32 @@ void processCollisions(jcEngInternal * eng)
         }
     }
 
+#ifdef COLL_DEBUG_MODE
+    if (num_collisions > 0)
+    {
+        fprintf(dbFile, "{\n");
+        fprintf(dbFile, "\"frame\" : %u,\n", frame);
+        fprintf(dbFile, "\"collisionProcessing\" : \n");
+        fprintf(dbFile, "[\n");
+    }
+#endif
+
     while (num_collisions > 0)
     {
         qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
         jfloat tColl = collisionList[0].t;
         jfloat tRem = 1 - collisionList[0].t; 
 
+#ifdef COLL_DEBUG_MODE
+	juint x;
+
+        fprintf(dbFile, "\"collisionList\" : [\n");
+	for (x = 0; x < num_collisions; x++) 
+	{
+            printCollision(dbFile, &collisionList[x]);
+	}
+        fprintf(dbFile, "],\n");
+#endif
 
         jcObject * o1 = collisionList[0].pairing->objects[0];
         jcObject * o2 = collisionList[0].pairing->objects[1];
@@ -464,6 +542,13 @@ void processCollisions(jcEngInternal * eng)
         r[0] = (*o2->v)[0] * (tColl-DELTA);
         r[1] = (*o2->v)[1] * (tColl-DELTA);
         jcObjectTranslate(o2, r);
+
+#ifdef COLL_DEBUG_MODE
+	fprintf(dbFile, "\"preCollisionObjects\" : [");
+	printJcObject(dbFile, collisionList[0].pairing->objects[0]);
+	printJcObject(dbFile, collisionList[0].pairing->objects[1]);
+	fprintf(dbFile, "],\n");
+#endif
 
         jvec deltavs[2];
         collisionList[0].pairing->handler(collisionList[0].pairing->objects, collisionList[0].t, collisionList[0].side, deltavs);
@@ -480,6 +565,15 @@ void processCollisions(jcEngInternal * eng)
         r[0] = (*o2->v)[0] * -tColl;
         r[1] = (*o2->v)[1] * -tColl;
         jcObjectTranslate(o2, r);
+
+
+#ifdef COLL_DEBUG_MODE
+	fprintf(dbFile, "\"postCollisionObjects\" : [");
+	printJcObject(dbFile, collisionList[0].pairing->objects[0]);
+	printJcObject(dbFile, collisionList[0].pairing->objects[1]);
+	fprintf(dbFile, "],\n");
+#endif
+
 
 	jfloat tb; JC_SIDE s2;
         if (checkCollision(collisionList[0].pairing, tRem, &tb, &s2))
@@ -520,6 +614,15 @@ void processCollisions(jcEngInternal * eng)
             }
         }
     }
+
+#ifdef COLL_DEBUG_MODE
+    if (num_collisions > 0)
+    {
+        fprintf(dbFile, "]\n");
+        fprintf(dbFile, "}\n");
+    }
+    frame++;
+#endif
 }
 
 void integrate(jcEngInternal * eng)
@@ -692,6 +795,12 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
 
     if (!ret)
         return ret;
+
+    // if either of the times of intersection are 
+    // less than 0, then the circles are moving apart
+    // and so can't have collided
+    if (tt[0] < 0 || tt[1] < 0)
+        return false;
 
     return getDesiredSolutionIfExtant(tt, 2, t);
 }
