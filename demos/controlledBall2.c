@@ -50,8 +50,8 @@ typedef struct ballInitParams
 } ballInitParams;
 
 ballInitParams INIT_PARAMS[] = {
-	{v : {0,0}, c : {180, 97.000107}, collGroup : COLL_GROUP_CONTROLLED_BALL},
-        {v: {0., -1.0}, c: {180, 77}, collGroup : COLL_GROUP_BALL},
+	{v : {1,1}, c : {249.999603, 189.243027}, collGroup : COLL_GROUP_CONTROLLED_BALL},
+        {v: {1.000000, -0.000010}, c: {249.000305, 50.248955}, collGroup : COLL_GROUP_BALL},
         // {v: {1.0, -0.2}, c: {180.0, 180.065186}},
         // {v: {0.0, 0.2}, c: {180, 90}}
 };
@@ -223,7 +223,8 @@ void controlledBallBallCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, 
     ball * ball = objects[1]->owner;
 
     jvec n = {cBall->collBody.c[0], cBall->collBody.c[1]};
-    jvecNorm(jvecSub(n, ball->collBody.c));
+    jvecSub(n, ball->collBody.c);
+    jvecNorm(n);
 
     momentumResolver(cBall->v, 0, ball->v, ball->im, n, 0, deltav[0], deltav[1]);
     cBall->v[0] = 0;
@@ -304,7 +305,7 @@ void controlledBallBoxCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, j
 void ballInBoxPreLogic(engine * e)
 {
     controlledBallEngine * eng = e->owner;
-
+ 
     if (isStateActive(GS_LEFT))
     {
         eng->balls[0].v[0] = -1;
@@ -327,6 +328,14 @@ void ballInBoxPreLogic(engine * e)
     }
     else{
         eng->balls[0].v[1] = 0;
+    }
+
+    jvec r = {eng->balls[0].collBody.c[0] - eng->balls[1].collBody.c[0], eng->balls[0].collBody.c[1] - eng->balls[1].collBody.c[1]};
+    if (jvecMagSq(r) < 400)
+    {
+
+    	printf("%f %f, %f %f\n", eng->balls[0].collBody.c[0], eng->balls[0].collBody.c[1], eng->balls[1].collBody.c[0], eng->balls[1].collBody.c[1]);
+	exit(1);
     }
 
     jcEngDoStep(eng->collEng);

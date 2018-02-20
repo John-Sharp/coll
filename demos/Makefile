@@ -11,7 +11,7 @@ controlledBall: generateListCode engines controlledBall.c
 	$(CC) controlledBall.c coll.o engine.o jTypes.o inputProcessor.o  $(CFLAGS) -o controlledBall
 
 controlledBall2: generateListCode engines controlledBall2.c
-	$(CC) controlledBall2.c coll.o engine.o jTypes.o inputProcessor.o  $(CFLAGS) -o controlledBall2
+	$(CC) controlledBall2.c ../coll.c engine.o jTypes.o inputProcessor.o  $(CFLAGS) -o controlledBall2
 
 engines: ../coll.h ../coll.c ../../jTypes/jTypes.h ../../jTypes/jTypes.c ../../engine/engine.c ../../engine/engine.h \
 	../../inputProcessor/inputProcessor.c ../../inputProcessor/inputProcessor.h

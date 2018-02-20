@@ -363,7 +363,7 @@ void printCollision(FILE * fp, const collision * c)
     fprintf(fp, "\"pairing\" : ");
     printPairing(fp, c->pairing);
     fprintf(fp, "\"t\" : %f,\n", c->t);
-    fprintf(fp, "\"deltav\" : [", c->t);
+    fprintf(fp, "\"deltav\" : [");
     printJvec(fp, c->deltav[0]);
     fprintf(fp, ", ");
     printJvec(fp, c->deltav[1]);
@@ -513,6 +513,9 @@ void processCollisions(jcEngInternal * eng)
         fprintf(dbFile, "\"collisionProcessing\" : \n");
         fprintf(dbFile, "[\n");
     }
+
+    if (num_collisions > 2)
+        printf("hedgehogtwocoll%d\n", num_collisions);
 #endif
 
     while (num_collisions > 0)
@@ -581,6 +584,7 @@ void processCollisions(jcEngInternal * eng)
             printf("ERROR! collision with new velocity after being retreated, really bad at t %f\n", tb);
 	}
 
+	jcObject * collisionObjects[2] = {collisionList[0].pairing->objects[0], collisionList[0].pairing->objects[1]};
 
         juint numCollisionsRemoved = 0;
         removeCollisionsInvolvingObjects(collisionList, num_collisions, collisionList[0].pairing->objects, 2, &numCollisionsRemoved);
@@ -593,10 +597,10 @@ void processCollisions(jcEngInternal * eng)
             jcPairing * pairing = p->val;
             jfloat t;
 
-            if (pairing->objects[0] == collisionList[0].pairing->objects[0]
-                    || pairing->objects[0] == collisionList[0].pairing->objects[1]
-                    || pairing->objects[1] == collisionList[0].pairing->objects[0]
-                    || pairing->objects[1] == collisionList[0].pairing->objects[1])
+            if (pairing->objects[0] == collisionObjects[0]
+                    || pairing->objects[0] == collisionObjects[1]
+                    || pairing->objects[1] == collisionObjects[0]
+                    || pairing->objects[1] == collisionObjects[1])
             {
                 // JC_SIDE side;
                 if (checkCollision(pairing, tRem, &t, &side))
@@ -652,6 +656,10 @@ bool solveQuadratic(jdouble a, jdouble b, jdouble c, jfloat *x)
     {
         return false;
     }
+    if  (a == 0)
+    {
+        return false;
+    }
     if (d == 0)
     {
         x[0] = -b / (2*a);
@@ -659,10 +667,15 @@ bool solveQuadratic(jdouble a, jdouble b, jdouble c, jfloat *x)
         return true;
     }
 
-    x[0] = (-b + sqrt(d))/(2*a);
-    x[1] = (-b - sqrt(d))/(2*a);
+    x[0] = (-b - sqrt(d))/(2*a);
+    x[1] = (-b + sqrt(d))/(2*a);
 
     return true;
+}
+
+jfloat jvecMagSq(jvec v)
+{
+    return v[0]*v[0] + v[1]*v[1];
 }
 
 bool circleLineCollDetect(jcircle ci, jvec p, jvec v, jfloat * t)
@@ -670,7 +683,30 @@ bool circleLineCollDetect(jcircle ci, jvec p, jvec v, jfloat * t)
     jfloat a = jvecDot(v, v);
     jfloat b = 2 * (jvecDot(p, v) - jvecDot(ci.c, v));
     jfloat c = jvecDot(p, p) + jvecDot(ci.c, ci.c) - 2 * jvecDot(p, ci.c) - ci.r * ci.r;
-    return solveQuadratic(a, b, c, t);
+    bool ret = solveQuadratic(a, b, c, t);
+
+    if (ret)
+    {
+         jvec np;
+	 while (1)
+	 {
+	     if (t[0] < 0)
+	     {
+                 return false;
+	     }
+	     np[0] = p[0] + t[0] * v[0];
+	     np[1] = p[1] + t[0] * v[1];
+	     np[0] -= ci.c[0];
+	     np[1] -= ci.c[1];
+             if (jvecMagSq(np) >  ci.r * ci.r)
+             {
+	         break;
+             }
+	     t[0] -= DELTA * t[0];
+	 }
+    }
+
+    return ret;
 }
 
 bool betweenPoints(jfloat a, jfloat b, jfloat c)
@@ -773,11 +809,6 @@ bool circleWithAxisParallelSegCollDetect(jcircle c, jvec v, jvec b, jfloat h, AX
     return getDesiredSolutionIfExtant(t, num_solns, tc);
 }
 
-jfloat jvecMagSq(jvec v)
-{
-    return v[0]*v[0] + v[1]*v[1];
-}
-
 bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
 {
     // if circles are initially colliding return false, I think
@@ -802,7 +833,8 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
     if (tt[0] < 0 || tt[1] < 0)
         return false;
 
-    return getDesiredSolutionIfExtant(tt, 2, t);
+    ret = getDesiredSolutionIfExtant(tt, 2, t);
+    return ret;
 }
 
 bool circleWithRectStaticDetect(jcircle c, jrect r)

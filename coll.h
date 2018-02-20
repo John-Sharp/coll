@@ -34,6 +34,8 @@ typedef struct jcObject
 
 } jcObject;
 
+jfloat jvecMagSq(jvec v);
+
 void printJcObject(FILE * fp, jcObject *object);
 void jcObjectTranslate(jcObject *object, jvec v);
 
