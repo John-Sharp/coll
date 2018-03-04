@@ -31,7 +31,6 @@ typedef struct jcObject
 
   juint groupNum;
   void * owner;
-
 } jcObject;
 
 jfloat jvecMagSq(jvec v);

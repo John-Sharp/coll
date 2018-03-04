@@ -15,7 +15,7 @@ controlledBall2: generateListCode engines controlledBall2.c
 
 engines: ../coll.h ../coll.c ../../jTypes/jTypes.h ../../jTypes/jTypes.c ../../engine/engine.c ../../engine/engine.h \
 	../../inputProcessor/inputProcessor.c ../../inputProcessor/inputProcessor.h
-	$(CC) -c ../coll.c ../../jTypes/jTypes.c ../../engine/engine.c ../../inputProcessor/inputProcessor.c # $(CFLAGS)
+	$(CC) -c ../coll.c ../../jTypes/jTypes.c ../../engine/engine.c ../../inputProcessor/inputProcessor.c $(CFLAGS)
 
 generateListCode: ../../dataStructures/templates/listTemplate.h ../../dataStructures/templates/listTemplate.inc
 	../../dataStructures/generateList.py ../../engine/listHeaders ../../engine/listCode actor:actor preLogicCallBack:preLogicCallBack

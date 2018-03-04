@@ -393,7 +393,6 @@ int clCompar(const void * a, const void * b)
     return -1;
 }
 
-#include <stdio.h>
 bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t, JC_SIDE * side)
 {
     jvec v;
@@ -513,9 +512,6 @@ void processCollisions(jcEngInternal * eng)
         fprintf(dbFile, "\"collisionProcessing\" : \n");
         fprintf(dbFile, "[\n");
     }
-
-    if (num_collisions > 2)
-        printf("hedgehogtwocoll%d\n", num_collisions);
 #endif
 
     while (num_collisions > 0)
@@ -525,13 +521,13 @@ void processCollisions(jcEngInternal * eng)
         jfloat tRem = 1 - collisionList[0].t; 
 
 #ifdef COLL_DEBUG_MODE
-	juint x;
+	    juint x;
 
         fprintf(dbFile, "\"collisionList\" : [\n");
-	for (x = 0; x < num_collisions; x++) 
-	{
+	    for (x = 0; x < num_collisions; x++) 
+	    {
             printCollision(dbFile, &collisionList[x]);
-	}
+	    }
         fprintf(dbFile, "],\n");
 #endif
 
@@ -571,26 +567,24 @@ void processCollisions(jcEngInternal * eng)
 
 
 #ifdef COLL_DEBUG_MODE
-	fprintf(dbFile, "\"postCollisionObjects\" : [");
-	printJcObject(dbFile, collisionList[0].pairing->objects[0]);
-	printJcObject(dbFile, collisionList[0].pairing->objects[1]);
-	fprintf(dbFile, "],\n");
+        fprintf(dbFile, "\"postCollisionObjects\" : [");
+        printJcObject(dbFile, collisionList[0].pairing->objects[0]);
+        printJcObject(dbFile, collisionList[0].pairing->objects[1]);
+        fprintf(dbFile, "],\n");
 #endif
 
 
-	jfloat tb; JC_SIDE s2;
+        jfloat tb; JC_SIDE s2;
         if (checkCollision(collisionList[0].pairing, tRem, &tb, &s2))
-	{
+        {
             printf("ERROR! collision with new velocity after being retreated, really bad at t %f\n", tb);
-	}
+        }
 
-	jcObject * collisionObjects[2] = {collisionList[0].pairing->objects[0], collisionList[0].pairing->objects[1]};
+        jcObject * collisionObjects[2] = {collisionList[0].pairing->objects[0], collisionList[0].pairing->objects[1]};
 
         juint numCollisionsRemoved = 0;
         removeCollisionsInvolvingObjects(collisionList, num_collisions, collisionList[0].pairing->objects, 2, &numCollisionsRemoved);
         num_collisions -= numCollisionsRemoved;
-
-        qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
 
         for (p = eng->pairingList; p != NULL; p = p->next)
         {
@@ -680,33 +674,86 @@ jfloat jvecMagSq(jvec v)
 
 bool circleLineCollDetect(jcircle ci, jvec p, jvec v, jfloat * t)
 {
-    jfloat a = jvecDot(v, v);
-    jfloat b = 2 * (jvecDot(p, v) - jvecDot(ci.c, v));
-    jfloat c = jvecDot(p, p) + jvecDot(ci.c, ci.c) - 2 * jvecDot(p, ci.c) - ci.r * ci.r;
-    bool ret = solveQuadratic(a, b, c, t);
+    t[0] = 0;
+    t[1] = 10;
 
-    if (ret)
+    jvec np;
+    np[0] = p[0] + t[0] * v[0];
+    np[1] = p[1] + t[0] * v[1];
+    np[0] -= ci.c[0];
+    np[1] -= ci.c[1];
+    while (t[0] <= 1)
     {
-         jvec np;
-	 while (1)
-	 {
-	     if (t[0] < 0)
-	     {
-                 return false;
-	     }
-	     np[0] = p[0] + t[0] * v[0];
-	     np[1] = p[1] + t[0] * v[1];
-	     np[0] -= ci.c[0];
-	     np[1] -= ci.c[1];
-             if (jvecMagSq(np) >  ci.r * ci.r)
-             {
-	         break;
-             }
-	     t[0] -= DELTA * t[0];
-	 }
+        np[0] = p[0] + t[0] * v[0];
+        np[1] = p[1] + t[0] * v[1];
+        np[0] -= ci.c[0];
+        np[1] -= ci.c[1];
+
+        if (jvecMagSq(np) <  ci.r * ci.r)
+        {
+            return true;
+        }
+        t[0] += DELTA;
     }
 
-    return ret;
+    return false;
+    // jfloat a = jvecDot(v, v);
+    // jfloat b = 2 * (jvecDot(p, v) - jvecDot(ci.c, v));
+    // jfloat c = jvecDot(p, p) + jvecDot(ci.c, ci.c) - 2 * jvecDot(p, ci.c) - ci.r * ci.r;
+    // bool ret = solveQuadratic(a, b, c, t);
+
+    // // 
+
+    // printf("inital tcoll time %f %s\n", t[0], ret?"true":"false");
+    // if (ret)
+    // {
+    //      jvec np;
+    //      np[0] = p[0] + t[0] * v[0];
+    //      np[1] = p[1] + t[0] * v[1];
+    //      np[0] -= ci.c[0];
+    //      np[1] -= ci.c[1];
+
+    //      if (jvecMagSq(np) <  ci.r * ci.r)
+    //      {
+    //          jfloat origMag = jvecMagSq(np);
+    //          while (1)
+    //          {
+    //               t[0] -= DELTA;
+
+    //               np[0] = p[0] + t[0] * v[0];
+    //               np[1] = p[1] + t[0] * v[1];
+    //               np[0] -= ci.c[0];
+    //               np[1] -= ci.c[1];
+
+    //               if (jvecMagSq(np) >  ci.r * ci.r)
+    //               {
+    //                   return ret;
+    //               }
+    // 	     printf("spinning A\n");
+    //          }
+    //      }
+    //      else
+    //      {
+    //          while (1)
+    //          {
+    //               t[0] += DELTA;
+
+    // 	          printf("spinning B %f\n", jvecMagSq(np) -  ci.r * ci.r);
+    //               np[0] = p[0] + t[0] * v[0];
+    //               np[1] = p[1] + t[0] * v[1];
+    //               np[0] -= ci.c[0];
+    //               np[1] -= ci.c[1];
+
+    //     	  if (jvecMagSq(np) <  ci.r * ci.r)
+    //     	  {
+    //                     t[0] -= DELTA;
+    //     		break;
+    //     	  }
+    //          }
+    //      }
+    // }
+
+    // return ret;
 }
 
 bool betweenPoints(jfloat a, jfloat b, jfloat c)
@@ -823,6 +870,7 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
     jfloat tt[2];
 
     bool ret = circleLineCollDetect(c3, c1.c, v, tt);
+    *t = tt[0];
 
     if (!ret)
         return ret;
@@ -830,8 +878,8 @@ bool circleWithCircleCollDetect(jcircle c1, jvec v, jcircle c2, jfloat * t)
     // if either of the times of intersection are 
     // less than 0, then the circles are moving apart
     // and so can't have collided
-    if (tt[0] < 0 || tt[1] < 0)
-        return false;
+    // if (tt[0] < 0 || tt[1] < 0)
+    //     return false;
 
     ret = getDesiredSolutionIfExtant(tt, 2, t);
     return ret;

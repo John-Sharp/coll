@@ -50,8 +50,8 @@ typedef struct ballInitParams
 } ballInitParams;
 
 ballInitParams INIT_PARAMS[] = {
-	{v : {1,1}, c : {249.999603, 189.243027}, collGroup : COLL_GROUP_CONTROLLED_BALL},
-        {v: {1.000000, -0.000010}, c: {249.000305, 50.248955}, collGroup : COLL_GROUP_BALL},
+	{v : {-1.000000, -1.000000}, c : {127.211990, 65.455395}, collGroup : COLL_GROUP_CONTROLLED_BALL},
+        {v: {0.239549, 0.390755}, c: {110.001411, 50.267086}, collGroup : COLL_GROUP_BALL},
         // {v: {1.0, -0.2}, c: {180.0, 180.065186}},
         // {v: {0.0, 0.2}, c: {180, 90}}
 };
@@ -330,6 +330,8 @@ void ballInBoxPreLogic(engine * e)
         eng->balls[0].v[1] = 0;
     }
 
+    // eng->balls[0].v[0] = -1;
+    // eng->balls[0].v[1] = -1;
     jvec r = {eng->balls[0].collBody.c[0] - eng->balls[1].collBody.c[0], eng->balls[0].collBody.c[1] - eng->balls[1].collBody.c[1]};
     if (jvecMagSq(r) < 400)
     {
