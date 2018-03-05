@@ -31,6 +31,8 @@ typedef struct jcObject
 
   juint groupNum;
   void * owner;
+
+  bool collidedThisFrame;
 } jcObject;
 
 jfloat jvecMagSq(jvec v);

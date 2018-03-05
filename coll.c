@@ -314,6 +314,7 @@ bool registerCircle(jcEng * enge, jcircle * c, jvec * v, juint groupNum, void * 
     object->v = v;
     object->groupNum = groupNum;
     object->owner = owner;
+    object->collidedThisFrame = false;
 
     if (!constructObjectPairings(eng, object))
     {
@@ -338,6 +339,7 @@ bool registerRect(jcEng * enge, jrect * r, jvec * v, juint groupNum, void * owne
     object->v = v;
     object->groupNum = groupNum;
     object->owner = owner;
+    object->collidedThisFrame = false;
 
     if (!constructObjectPairings(eng, object))
     {
@@ -395,12 +397,15 @@ int clCompar(const void * a, const void * b)
 
 bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t, JC_SIDE * side)
 {
+    tRem = 1;
     jvec v;
     jfloat t_temp;
 
     // calculate velocity of object 0 relative to object 1
-    v[0] = (*pairing->objects[0]->v)[0] - (*pairing->objects[1]->v)[0];
-    v[1] = (*pairing->objects[0]->v)[1] - (*pairing->objects[1]->v)[1];
+    v[0] = (pairing->objects[0]->collidedThisFrame ? 0 : (*pairing->objects[0]->v)[0]) \
+           - (pairing->objects[1]->collidedThisFrame ? 0 : (*pairing->objects[1]->v)[0]);
+    v[1] = (pairing->objects[0]->collidedThisFrame ? 0 : (*pairing->objects[0]->v)[1]) \
+           - (pairing->objects[1]->collidedThisFrame ? 0 : (*pairing->objects[1]->v)[1]);
 
     if (pairing->objects[0]->shapeType == SHAPE_TYPE_CIRCLE
             && pairing->objects[1]->shapeType == SHAPE_TYPE_CIRCLE)
@@ -533,14 +538,16 @@ void processCollisions(jcEngInternal * eng)
 
         jcObject * o1 = collisionList[0].pairing->objects[0];
         jcObject * o2 = collisionList[0].pairing->objects[1];
+        o1->collidedThisFrame = true;
+        o2->collidedThisFrame = true;
 
         // translate object to position just before collision point
-        jvec r = {(*o1->v)[0] * (tColl-DELTA), (*o1->v)[1] * (tColl-DELTA)};
-        jcObjectTranslate(o1, r);
+        // jvec r = {(*o1->v)[0] * (tColl-DELTA), (*o1->v)[1] * (tColl-DELTA)};
+        // jcObjectTranslate(o1, r);
 
-        r[0] = (*o2->v)[0] * (tColl-DELTA);
-        r[1] = (*o2->v)[1] * (tColl-DELTA);
-        jcObjectTranslate(o2, r);
+        // r[0] = (*o2->v)[0] * (tColl-DELTA);
+        // r[1] = (*o2->v)[1] * (tColl-DELTA);
+        // jcObjectTranslate(o2, r);
 
 #ifdef COLL_DEBUG_MODE
 	fprintf(dbFile, "\"preCollisionObjects\" : [");
@@ -557,13 +564,13 @@ void processCollisions(jcEngInternal * eng)
         jvecAdd((*o2->v), deltavs[1]);
 
         // retard collision objects v t
-        r[0] = (*o1->v)[0] * -tColl;
-        r[1] = (*o1->v)[1] * -tColl;
-        jcObjectTranslate(o1, r);
+        // r[0] = (*o1->v)[0] * -tColl;
+        // r[1] = (*o1->v)[1] * -tColl;
+        // jcObjectTranslate(o1, r);
 
-        r[0] = (*o2->v)[0] * -tColl;
-        r[1] = (*o2->v)[1] * -tColl;
-        jcObjectTranslate(o2, r);
+        // r[0] = (*o2->v)[0] * -tColl;
+        // r[1] = (*o2->v)[1] * -tColl;
+        // jcObjectTranslate(o2, r);
 
 
 #ifdef COLL_DEBUG_MODE
@@ -629,7 +636,11 @@ void integrate(jcEngInternal * eng)
 
     for (p = eng->objectList; p != NULL; p = p->next)
     {
-        jcObjectTranslate(p->val, *p->val->v);
+        if (!p->val->collidedThisFrame)
+        {
+            jcObjectTranslate(p->val, *p->val->v);
+        }
+        p->val->collidedThisFrame = false;
     }
 }
 

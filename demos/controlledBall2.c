@@ -330,14 +330,11 @@ void ballInBoxPreLogic(engine * e)
         eng->balls[0].v[1] = 0;
     }
 
-    // eng->balls[0].v[0] = -1;
-    // eng->balls[0].v[1] = -1;
     jvec r = {eng->balls[0].collBody.c[0] - eng->balls[1].collBody.c[0], eng->balls[0].collBody.c[1] - eng->balls[1].collBody.c[1]};
     if (jvecMagSq(r) < 400)
     {
-
-    	printf("%f %f, %f %f\n", eng->balls[0].collBody.c[0], eng->balls[0].collBody.c[1], eng->balls[1].collBody.c[0], eng->balls[1].collBody.c[1]);
-	exit(1);
+        printf("%f %f, %f %f\n", eng->balls[0].collBody.c[0], eng->balls[0].collBody.c[1], eng->balls[1].collBody.c[0], eng->balls[1].collBody.c[1]);
+        exit(1);
     }
 
     jcEngDoStep(eng->collEng);
