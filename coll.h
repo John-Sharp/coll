@@ -32,7 +32,7 @@ typedef struct jcObject
   juint groupNum;
   void * owner;
 
-  bool collidedThisFrame;
+  juint collisionsThisFrame;
 } jcObject;
 
 jfloat jvecMagSq(jvec v);

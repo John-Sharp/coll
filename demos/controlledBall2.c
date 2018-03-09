@@ -52,8 +52,8 @@ typedef struct ballInitParams
 ballInitParams INIT_PARAMS[] = {
 	{v : {-1.000000, -1.000000}, c : {127.211990, 65.455395}, collGroup : COLL_GROUP_CONTROLLED_BALL},
         {v: {0.239549, 0.390755}, c: {110.001411, 50.267086}, collGroup : COLL_GROUP_BALL},
-        // {v: {1.0, -0.2}, c: {180.0, 180.065186}},
-        // {v: {0.0, 0.2}, c: {180, 90}}
+        {v: {1.0, -0.2}, c: {180.0, 180.065186}, collGroup : COLL_GROUP_BALL},
+        {v: {0.0, 0.2}, c: {180, 90}, collGroup : COLL_GROUP_BALL}
 };
 
 
@@ -278,18 +278,22 @@ void controlledBallBoxCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, j
     if (side & JC_SIDE_L)
     {
         n[0] += -1;
+        ball->v[0] = 0;
     }
     if (side & JC_SIDE_R)
     {
         n[0] += 1;
+        ball->v[0] = 0;
     }
     if (side & JC_SIDE_B)
     {
         n[1] += -1;
+        ball->v[1] = 0;
     }
     if (side & JC_SIDE_T)
     {
         n[1] += 1;
+        ball->v[1] = 0;
     }
 
     if (n[0] != 0 && n[1] != 0)
@@ -298,7 +302,11 @@ void controlledBallBoxCollHandler(jcObject ** objects, jfloat t, JC_SIDE side, j
         n[1] *= ISQRT2;
     }
 
-    momentumResolver(ball->v, ball->im, box->v, 0, n, 1, *deltavBall, *deltavBox);
+    (*deltavBall)[0] = 0;
+    (*deltavBall)[1] = 0;
+
+    (*deltavBox)[0] = 0;
+    (*deltavBox)[1] = 0;
 }
 
 

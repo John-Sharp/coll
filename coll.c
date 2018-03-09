@@ -314,7 +314,7 @@ bool registerCircle(jcEng * enge, jcircle * c, jvec * v, juint groupNum, void * 
     object->v = v;
     object->groupNum = groupNum;
     object->owner = owner;
-    object->collidedThisFrame = false;
+    object->collisionsThisFrame = 0;
 
     if (!constructObjectPairings(eng, object))
     {
@@ -339,7 +339,7 @@ bool registerRect(jcEng * enge, jrect * r, jvec * v, juint groupNum, void * owne
     object->v = v;
     object->groupNum = groupNum;
     object->owner = owner;
-    object->collidedThisFrame = false;
+    object->collisionsThisFrame = 0;
 
     if (!constructObjectPairings(eng, object))
     {
@@ -402,10 +402,10 @@ bool checkCollision(jcPairing *pairing, jfloat tRem, jfloat *t, JC_SIDE * side)
     jfloat t_temp;
 
     // calculate velocity of object 0 relative to object 1
-    v[0] = (pairing->objects[0]->collidedThisFrame ? 0 : (*pairing->objects[0]->v)[0]) \
-           - (pairing->objects[1]->collidedThisFrame ? 0 : (*pairing->objects[1]->v)[0]);
-    v[1] = (pairing->objects[0]->collidedThisFrame ? 0 : (*pairing->objects[0]->v)[1]) \
-           - (pairing->objects[1]->collidedThisFrame ? 0 : (*pairing->objects[1]->v)[1]);
+    v[0] = (pairing->objects[0]->collisionsThisFrame == 5 ? 0 : (*pairing->objects[0]->v)[0]) \
+           - (pairing->objects[1]->collisionsThisFrame == 5 ? 0 : (*pairing->objects[1]->v)[0]);
+    v[1] = (pairing->objects[0]->collisionsThisFrame == 5 ? 0 : (*pairing->objects[0]->v)[1]) \
+           - (pairing->objects[1]->collisionsThisFrame == 5 ? 0 : (*pairing->objects[1]->v)[1]);
 
     if (pairing->objects[0]->shapeType == SHAPE_TYPE_CIRCLE
             && pairing->objects[1]->shapeType == SHAPE_TYPE_CIRCLE)
@@ -522,7 +522,7 @@ void processCollisions(jcEngInternal * eng)
     while (num_collisions > 0)
     {
         qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
-        jfloat tColl = collisionList[0].t;
+        // jfloat tColl = collisionList[0].t;
         jfloat tRem = 1 - collisionList[0].t; 
 
 #ifdef COLL_DEBUG_MODE
@@ -538,16 +538,20 @@ void processCollisions(jcEngInternal * eng)
 
         jcObject * o1 = collisionList[0].pairing->objects[0];
         jcObject * o2 = collisionList[0].pairing->objects[1];
-        o1->collidedThisFrame = true;
-        o2->collidedThisFrame = true;
+        o1->collisionsThisFrame++;
+        o2->collisionsThisFrame++;
 
         // translate object to position just before collision point
         // jvec r = {(*o1->v)[0] * (tColl-DELTA), (*o1->v)[1] * (tColl-DELTA)};
-        // jcObjectTranslate(o1, r);
+        // if (o1->collisionsThisFrame < 5)
+        //     jcObjectTranslate(o1, r);
 
-        // r[0] = (*o2->v)[0] * (tColl-DELTA);
-        // r[1] = (*o2->v)[1] * (tColl-DELTA);
-        // jcObjectTranslate(o2, r);
+        // if (o2->collisionsThisFrame < 5)
+        // {
+        //     r[0] = (*o2->v)[0] * (tColl-DELTA);
+        //     r[1] = (*o2->v)[1] * (tColl-DELTA);
+        //     jcObjectTranslate(o2, r);
+        // }
 
 #ifdef COLL_DEBUG_MODE
 	fprintf(dbFile, "\"preCollisionObjects\" : [");
@@ -591,6 +595,7 @@ void processCollisions(jcEngInternal * eng)
 
         juint numCollisionsRemoved = 0;
         removeCollisionsInvolvingObjects(collisionList, num_collisions, collisionList[0].pairing->objects, 2, &numCollisionsRemoved);
+        qsort(collisionList, MAX_COLLISIONS, sizeof(collisionList[0]), clCompar);
         num_collisions -= numCollisionsRemoved;
 
         for (p = eng->pairingList; p != NULL; p = p->next)
@@ -636,11 +641,11 @@ void integrate(jcEngInternal * eng)
 
     for (p = eng->objectList; p != NULL; p = p->next)
     {
-        if (!p->val->collidedThisFrame)
+        if (p->val->collisionsThisFrame < 5)
         {
             jcObjectTranslate(p->val, *p->val->v);
         }
-        p->val->collidedThisFrame = false;
+        p->val->collisionsThisFrame = 0;
     }
 }
 
